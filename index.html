@@ -259,7 +259,7 @@ body.sem-nav .app{padding-bottom:120px}
 nav.nav button i{display:grid;place-items:center;font-style:normal;padding:4px 18px;border-radius:14px;margin-bottom:1px}
 nav.nav button{font-size:11px;gap:1px}
 .fab{display:grid;place-items:center}
-.top.gr{gap:12px}
+.top .av{width:38px;height:38px;font-size:16px}.sd{color:var(--muted);font-size:14px;margin:-6px 2px 14px}
 .av{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#c98a0b);color:var(--gold-ink);font-family:var(--display);font-weight:800;font-size:19px;display:grid;place-items:center}
 .av.big{width:52px;height:52px;font-size:22px}
 .grt{flex:1;display:flex;flex-direction:column;line-height:1.15;min-width:0}
@@ -986,7 +986,7 @@ function renderInicio(){
   const lemb=db.eventos.filter(e=>e.data===hoje()||e.data===amanha()).sort((a,b)=>(a.data+(a.hora||"")).localeCompare(b.data+(b.hora||"")));
   const d=new Date();
   const hr=d.getHours(),sd=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite",nm=(db.cfg.nome||"").trim();
-  let h=`<div class="top gr"><button class="av" data-a="nome" aria-label="Seu nome">${esc((nm[0]||"P").toUpperCase())}</button><div class="grt"><small>${sd}${nm?",":""}</small><b>${nm?esc(nm):"Púlpito"}</b></div><span class="meta">${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</span></div>`;
+  let h=`<div class="top"><h1>Púlpito<span>.</span></h1><button class="av" data-a="nome" aria-label="Seu nome">${esc((nm[0]||"P").toUpperCase())}</button></div><p class="sd">${sd}${nm?", "+esc(nm):""} · ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</p>`;
   if(alvo)h+=`<div class="hero"><small>Próxima pregação</small><h2>${esc(alvo.titulo||"Sem título")}</h2>
     <div class="meta">${evMsg?metaEv(evMsg):alvo.min+" min · "+alvo.topicos.length+" tópicos"}</div>
     <div class="bar"><button class="btn gold" data-a="pregarId" data-v="${alvo.id}">▶ Pregar</button><button class="btn" data-a="abrir" data-v="${alvo.id}">Editar</button></div></div>`;
