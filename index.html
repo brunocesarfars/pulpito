@@ -192,6 +192,31 @@ body.sem-nav .app{padding-bottom:40px}
 .res{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:15px}
 .res b{color:var(--gold);display:block;font-size:13px}
 .pc .bib div:not(.bt){white-space:pre-line}
+/* Tablet e telas largas */
+@media (min-width:700px){
+  .app{max-width:980px;padding:0 28px 110px}
+  nav.nav div{max-width:760px}
+  .fab{right:max(24px,calc(50% - 466px))}
+  body{font-size:17px}
+  .hero{padding:26px}.hero h2{font-size:34px}
+  #app>.card,#app>.hero{max-width:100%}
+  .tiles{grid-template-columns:repeat(4,1fr)}
+  .bgrid{grid-template-columns:repeat(4,1fr)}
+  .cgrid{grid-template-columns:repeat(10,1fr)}
+  .rd{max-width:720px;margin:0 auto}
+  .pbar,.pmeta,.pnav,.sheet{max-width:860px}
+  .pprog{max-width:860px}
+  .pc{max-width:860px}
+  .pill b{font-size:32px}
+  .pc h1{font-size:calc(var(--nf) + 16px)}
+  .ferr{grid-template-columns:repeat(5,1fr)}
+  .mb{max-width:640px}
+  .cal button,.cal i{aspect-ratio:1.5}
+}
+@media (min-width:1000px){
+  .lista-msgs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .lista-msgs .sc{margin-bottom:0}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -433,6 +458,7 @@ function renderMsgs(){
   if(!lista.length)h+=`<p class="empty">${db.sermoes.length?"Nada encontrado.":"Nenhuma mensagem ainda. Toque em + ou em ⤓."}</p>`;
   grupos.forEach(g=>{
     if(g.h)h+=`<div class="gh">${esc(g.h)}</div>`;
+    h+=`<div class="lista-msgs">`;
     g.it.forEach(s=>{
       const ls=livrosDo(s),n=s.hist.length,ult=n?s.hist.map(x=>x.data).sort().pop():"";
       h+=`<div class="sc"><button data-a="abrir" data-v="${s.id}" style="text-align:left;width:100%"><b>${esc(s.titulo||"Sem título")}</b>
@@ -440,6 +466,7 @@ function renderMsgs(){
       <span class="chips"><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}${s.pasta?`<span class="chip">📁 ${esc(s.pasta)}</span>`:""}${n?`<span class="chip">Pregado ${n}× · última em ${dataBR(ult)}</span>`:""}</span></button>
       <button class="star ${s.fav?"on":""}" data-a="fav" data-v="${s.id}" aria-label="Favoritar">${s.fav?"★":"☆"}</button></div>`;
     });
+    h+=`</div>`;
   });
   h+=`<button class="fab" data-a="novo" aria-label="Nova mensagem">+</button>`;
   const foco=document.activeElement&&document.activeElement.id==="q";
