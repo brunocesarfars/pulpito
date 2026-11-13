@@ -1518,7 +1518,7 @@ function desenharPregar(){
     h+=`<h1>${P.i+1}. ${esc(t.titulo)}</h1>${P.i===0&&s.titulo?`<div class="sr">${esc(s.titulo)}</div>`:`<div class="sr"></div>`}${t.blocos.map(blocoPreg).join("")||`<div class="vz">Sem anotações neste tópico.</div>`}`;
   }
   h+=`</div></div>`;
-  if(bv)h+=`<button class="sheet" data-a="sheet"><small>VERSÍCULO BASE</small><b>${esc(bv.ref||"")}</b>${bv.t?(P.sheet?`<p>${esc(bv.t)}</p>`:`<div class="l1">${esc(bv.t.replace(/\n/g," "))}</div>`):""}</button>`;
+  if(bv)h+=`<button class="sheet" data-a="psheet"><small>VERSÍCULO BASE</small><b>${esc(bv.ref||"")}</b>${bv.t?(P.sheet?`<p>${esc(bv.t)}</p>`:`<div class="l1">${esc(bv.t.replace(/\n/g," "))}</div>`):""}</button>`;
   h+=`<div class="prail"><small>TÓPICOS</small>${s.topicos.map((x,i)=>`<button class="${i===P.i?"on":""}" data-a="irt" data-v="${i}"><span class="num">${i+1}</span><span>${esc(x.titulo||"Sem título")}</span></button>`).join("")}</div>
   <div class="pside"><button class="sa2" data-a="ant" ${P.i<=0?"disabled":""} aria-label="Tópico anterior">${ico("chev",26)}<small>Anterior</small></button><button class="sn2" data-a="prox" ${P.i>=n-1?"disabled":""} aria-label="Próximo tópico">${ico("chev",34)}<b>Próximo</b><small>${n?P.i+1+" de "+n:""}</small></button></div>
   <div class="pnav"><button class="btn" data-a="ant" ${P.i<=0?"disabled style='opacity:.4'":""}>‹ Anterior</button><button class="btn gold" data-a="prox" ${P.i>=n-1?"disabled style='opacity:.4'":""}>Próximo ›</button></div>`;
@@ -1813,7 +1813,7 @@ document.addEventListener("click",e=>{
   else if(a==="go"){if(P.t0){P.acc+=Date.now()-P.t0;P.t0=null;}else{P.t0=Date.now();try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.resume)ac.resume();}catch(x){}}atualizar();}
   else if(a==="prox")irTopico(1);
   else if(a==="ant")irTopico(-1);
-  else if(a==="sheet"){P.sheet=!P.sheet;desenharPregar();}
+  else if(a==="psheet"){P.sheet=!P.sheet;desenharPregar();}
   else if(a==="lista")abrirListaT();
   else if(a==="irt"){fechar();P.i=+v;P.sheet=false;desenharPregar();}
   else if(a==="ajustes")abrirAjustes();
