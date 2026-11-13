@@ -1422,6 +1422,41 @@ function limparRef(titulo,ref){
   let t=titulo.replace(ref,"").replace(/[\(\[]\s*[\)\]]/g,"").replace(/[\s\-–—:,;]+$/,"").replace(/^[\s\-–—:,;]+/,"").trim();
   return t||titulo;
 }
+/* Passagem bíblica citada no texto (ex.: Salmo 25:4–5 — NAA “texto”) vira bloco ligado à Bíblia do app */
+const VERS_RX="(?:NAA|NVI|NVT|NTLH|ARA|ARC|ACF|AA|KJV)";
+const RXM=new RegExp("((?:[1-3]\\s*)?(?:[A-Za-zÀ-ú]+\\s+){0,3}[A-Za-zÀ-ú]+\\s+\\d{1,3}\\s*[:.]\\s*\\d{1,3}(?:\\s*[–\\-,]\\s*\\d{1,3})*)\\s*[—–\\-:]?\\s*(?:\\(?"+VERS_RX+"\\)?\\s*)?[—–\\-:]?\\s*[“\"«]([^”\"»]{8,}?)[”\"»]","s");
+const RXSO=/^((?:[1-3]\s*)?(?:[A-Za-zÀ-ú]+\s+){0,2}[A-Za-zÀ-ú]+\s+\d{1,3}\s*[:.]\s*\d{1,3}(?:\s*[–\-,]\s*\d{1,3})*)\.?$/;
+const refOk=c=>{try{return !!textoRef(c);}catch(e){return false;}};
+const capRef=r=>r.charAt(0).toUpperCase()+r.slice(1);
+function quebraPass(p){
+  const out=[];let rest=p,pend="";
+  for(;;){
+    const m=RXM.exec(rest);if(!m)break;
+    const pal=m[1].replace(/\s+/g," ").trim().split(" ");let ref="",k=0;
+    for(;k<pal.length-1;k++){const c=pal.slice(k).join(" ");if(refOk(c)){ref=c;break;}}
+    const fim=m.index+m[0].length;
+    if(!ref){pend+=rest.slice(0,fim);rest=rest.slice(fim);continue;}
+    const antes=(pend+rest.slice(0,m.index)+" "+pal.slice(0,k).join(" ")).trim();pend="";
+    if(antes)out.push({t:antes});
+    out.push({ref:capRef(ref)});
+    rest=rest.slice(fim).trim();
+  }
+  const sobra=(pend+rest).trim();if(sobra)out.push({t:sobra});
+  return out;
+}
+function ligaBiblia(ps){
+  const out=[];let buf=[];
+  const junta=a=>{let t="";a.forEach((p,k)=>{t+=(k?(/^•/.test(p)&&/^•/.test(a[k-1])?"\n":"\n\n"):"")+p;});return t;};
+  const flush=()=>{if(buf.length)blocosDeNotas(junta(buf)).forEach(x=>out.push(x));buf=[];};
+  ps.forEach(p=>{
+    const so=RXSO.exec(p.trim());
+    if(so&&refOk(so[1])){flush();out.push({id:uid(),tipo:"biblico",ref:capRef(so[1]),t:""});return;}
+    const pc=quebraPass(p);
+    if(!pc.some(x=>x.ref)){buf.push(p);return;}
+    pc.forEach(x=>{if(x.ref){flush();out.push({id:uid(),tipo:"biblico",ref:x.ref,t:""});}else buf.push(x.t);});
+  });
+  flush();return out;
+}
 function estruturar(bl,arq){
   bl=bl.filter(b=>b.t&&b.t.trim());
   if(!bl.length)return null;
@@ -1450,9 +1485,9 @@ function estruturar(bl,arq){
   }
   if(!tops.some(x=>x.t!=="Introdução")){
     const todos=tops.flatMap(x=>x.p);
-    return{titulo,base,topicos:[{id:uid(),titulo:"Texto do sermão",ref:"",blocos:blocosDeNotas(junta(todos))}],semTopicos:true};
+    return{titulo,base,topicos:[{id:uid(),titulo:"Texto do sermão",ref:"",blocos:ligaBiblia(todos)}],semTopicos:true};
   }
-  return{titulo,base,topicos:tops.map(x=>{const r=refDe(x.t);return{id:uid(),titulo:semNum(limparRef(x.t,r)),ref:r,blocos:blocosDeNotas(junta(x.p))};})};
+  return{titulo,base,topicos:tops.map(x=>{const r=refDe(x.t);return{id:uid(),titulo:semNum(limparRef(x.t,r)),ref:r,blocos:ligaBiblia(x.p)};})};
 }
 function criarImportado(bl,arq){
   const r=estruturar(bl,arq);
@@ -1463,7 +1498,7 @@ function criarImportado(bl,arq){
     bl.filter(b=>b.t&&b.t.trim()).forEach(b=>{
       if(!pulou&&norm(b.t)===norm(r.titulo)){pulou=true;return;}
       if(b.k==="h")blocos.push({id:uid(),tipo:"texto",t:"<b>"+esc(b.t)+"</b>"});
-      else blocosDeNotas(b.t).forEach(x=>blocos.push(x));
+      else ligaBiblia([b.t]).forEach(x=>blocos.push(x));
     });
     topicos=[{id:uid(),titulo:"Texto do sermão",ref:"",blocos}];modo="rolagem";
   }
