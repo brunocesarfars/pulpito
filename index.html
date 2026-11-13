@@ -374,6 +374,15 @@ nav.nav button{font-size:11px;gap:1px}
 @media(min-width:700px){.ptop{max-width:860px}}
 @media (orientation:landscape) and (min-width:640px){.ptop{grid-area:prog;max-width:none;width:calc(100% - 28px);margin:0 14px}}
 @media (orientation:landscape) and (max-height:480px){.ptop{height:16px}.ptop button{height:16px}.ptop button::after{top:5px}#tmark{height:14px;top:1px}}
+mark.g1,mark.g2,mark.g3{color:inherit;border-radius:3px;padding:0 2px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+mark.g1{background:rgba(245,211,74,.4)}mark.g2{background:rgba(94,200,130,.36)}mark.g3{background:rgba(240,120,160,.36)}
+:root[data-tema="claro"] mark.g1{background:rgba(250,204,21,.6)}:root[data-tema="claro"] mark.g2{background:rgba(74,200,120,.5)}:root[data-tema="claro"] mark.g3{background:rgba(244,114,182,.45)}
+.fmt .hl span{display:block;width:16px;height:16px;border-radius:5px;margin:auto}
+.fmt .hl.x span{background:none;border:1.5px solid var(--muted);position:relative}
+.fmt .hl.x span::after{content:"";position:absolute;left:-2px;right:-2px;top:50%;border-top:1.5px solid var(--muted);transform:rotate(-45deg)}
+.pc h2.rh{font-family:var(--display);font-size:calc(var(--nf) + 5px);line-height:1.2;color:var(--gold);margin:26px 0 8px;font-weight:800}
+#preach.roll .pnav,#preach.roll .pside,#preach.roll .pmeta,#preach.roll .prail,#preach.roll .pl-btn{display:none!important}
+#preach.show.roll{grid-template-columns:minmax(0,1fr);grid-template-areas:"bar" "prog" "cont" "sheet"}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -935,9 +944,9 @@ const amanha=()=>{const d=new Date();d.setDate(d.getDate()+1);return d.getFullYe
 const dataBR=d=>d?d.split("-").reverse().join("/"):"";
 /* Texto rico: só negrito, itálico e sublinhado passam. */
 function limpa(h){
-  const d=new DOMParser().parseFromString("<body>"+(h||"")+"</body>","text/html"),ok=new Set(["B","STRONG","I","EM","U","BR","DIV","P"]);
+  const d=new DOMParser().parseFromString("<body>"+(h||"")+"</body>","text/html"),ok=new Set(["B","STRONG","I","EM","U","BR","DIV","P","MARK"]);
   (function w(n){[...n.childNodes].forEach(c=>{
-    if(c.nodeType===1){w(c);if(!ok.has(c.tagName))c.replaceWith(...c.childNodes);else[...c.attributes].forEach(a=>c.removeAttribute(a.name));}
+    if(c.nodeType===1){w(c);if(!ok.has(c.tagName))c.replaceWith(...c.childNodes);else[...c.attributes].forEach(a=>{if(!(c.tagName==="MARK"&&a.name==="class"&&/^g[1-3]$/.test(a.value)))c.removeAttribute(a.name);});}
     else if(c.nodeType!==3)c.remove();
   });})(d.body);
   return d.body.innerHTML;
@@ -970,7 +979,7 @@ function ajustar(){
   db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
   db.eventos=db.eventos||[];db.pastas=db.pastas||[];
   db.sermoes.forEach(s=>{
-    s.status=s.status||"rascunho";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
+    s.status=s.status||"rascunho";s.modo=s.modo==="rolagem"?"rolagem":"topicos";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
     s.topicos.forEach(t=>{if(!t.blocos){t.blocos=blocosDeNotas(t.notas);delete t.notas;}t.ref=t.ref||"";});
   });
 }
@@ -1194,7 +1203,7 @@ const cur=()=>sermao(V.id);
 function blocoEd(b,i,n){
   const [ic,lab]=TIPOS[b.tipo];let c="";
   if(b.tipo==="biblico")c=`<input class="in" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><textarea class="in" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea><button class="btn" data-a="bfill" data-v="${b.id}">📖 Buscar texto na Bíblia</button>`;
-  else if(b.tipo==="texto")c=`<div class="fmt"><button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button></div><div class="rt" contenteditable="true" role="textbox" aria-label="Texto" data-b="html">${limpa(b.t)}</div>`;
+  else if(b.tipo==="texto")c=`<div class="fmt"><button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button><button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button></div><div class="rt" contenteditable="true" role="textbox" aria-label="Texto" data-b="html">${limpa(b.t)}</div>`;
   else if(b.tipo==="lista")c=`<textarea class="in" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<textarea class="in" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
   else c=`<textarea class="in" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
@@ -1227,6 +1236,8 @@ function renderEdit(y){
   <datalist id="dl-p">${pastasTodas().map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
   <label class="f">Status</label>
   <div class="row tm">${STATUS.map(([k,n])=>`<button class="${s.status===k?"on":""}" data-a="status" data-v="${k}">${n}</button>`).join("")}</div>
+  <label class="f">Modo de pregação</label>
+  <div class="row tm"><button class="${s.modo==="rolagem"?"":"on"}" data-a="modoP" data-v="topicos">Por tópicos</button><button class="${s.modo==="rolagem"?"on":""}" data-a="modoP" data-v="rolagem">Rolagem contínua</button></div>
   <label class="f">Tempo de mensagem</label>
   <div class="row tm">${tempos.map(t=>`<button class="${s.min===t?"on":""}" data-a="tempo" data-v="${t}">${t} min</button>`).join("")}
     <input class="in" id="f-min" type="number" min="1" max="300" inputmode="numeric" value="${tempos.includes(s.min)?"":s.min}" placeholder="outro" aria-label="Outro tempo em minutos"></div>
@@ -1416,10 +1427,20 @@ function estruturar(bl,arq){
 function criarImportado(bl,arq){
   const r=estruturar(bl,arq);
   if(!r){toast("Não encontrei texto no arquivo.",2600);return;}
-  const s={id:uid(),titulo:r.titulo,assunto:"",pasta:"Importados",min:30,at:Date.now(),status:"rascunho",base:r.base,hist:[],fav:false,aberto:0,topicos:r.topicos};
+  let topicos=r.topicos,modo="topicos";
+  if(IMP.manter){
+    const blocos=[];let pulou=false;
+    bl.filter(b=>b.t&&b.t.trim()).forEach(b=>{
+      if(!pulou&&norm(b.t)===norm(r.titulo)){pulou=true;return;}
+      if(b.k==="h")blocos.push({id:uid(),tipo:"texto",t:"<b>"+esc(b.t)+"</b>"});
+      else blocosDeNotas(b.t).forEach(x=>blocos.push(x));
+    });
+    topicos=[{id:uid(),titulo:"Texto do sermão",ref:"",blocos}];modo="rolagem";
+  }
+  const s={id:uid(),titulo:r.titulo,assunto:"",pasta:"Importados",min:30,at:Date.now(),status:"rascunho",base:r.base,hist:[],fav:false,aberto:0,modo,topicos};
   db.sermoes.push(s);salvar();fechar();
   V.id=s.id;V.tela="edit";V.apagar=null;V.ab=new Set();render();scrollTo(0,0);
-  toast(r.semTopicos?"Importado como texto único. Divida em tópicos se quiser.":"Importado com "+r.topicos.length+" tópico"+(r.topicos.length===1?"":"s")+". Confira e edite.",3200);
+  toast(IMP.manter?"Importado como no arquivo. Ao pregar, role a tela.":r.semTopicos?"Importado como texto único. Divida em tópicos se quiser.":"Importado com "+r.topicos.length+" tópico"+(r.topicos.length===1?"":"s")+". Confira e edite.",3200);
 }
 async function importarArquivo(f){
   const ext=(f.name.split(".").pop()||"").toLowerCase();
@@ -1437,8 +1458,12 @@ async function importarArquivo(f){
   }
 }
 function abrirImportar(){
+  IMP.manter=false;
   $("mb").innerHTML=`<h3>Importar sermão</h3>
   <p class="meta">Escolha um PDF, Word (.docx) ou TXT. O Púlpito lê o texto e separa em tópicos pelos títulos, numerações e negritos. Depois você edita tudo aqui.</p>
+  <label class="f" style="margin-top:0">Como importar</label>
+  <div class="row tm"><button class="on" data-a="impmodo" data-v="topicos">Dividir em tópicos</button><button data-a="impmodo" data-v="arquivo">Manter como no arquivo</button></div>
+  <p class="meta" style="margin:6px 0 10px">Em "Manter como no arquivo" o sermão vira um texto só, na mesma ordem do arquivo, e você pega rolando a tela.</p>
   <label class="btn gold" for="arq" style="display:flex;align-items:center;justify-content:center;width:100%;margin:8px 0 14px">📂 Escolher arquivo (PDF, Word ou TXT)</label><input type="file" id="arq" aria-label="Escolher arquivo" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
   <label class="f" for="colar" style="margin-top:0">Ou cole o texto aqui</label>
   <textarea class="in" id="colar" placeholder="Cole o sermão. Linhas curtas como “1. A tempestade chega” viram tópicos."></textarea>
@@ -1495,6 +1520,21 @@ function abrirPregar(id){
   $("preach").classList.add("show");document.body.style.overflow="hidden";
   desenharPregar();atualizar();tick=setInterval(atualizar,250);travarTela();
 }
+function grifar(n){
+  const sel=getSelection();if(!sel.rangeCount)return;
+  const r=sel.getRangeAt(0),an=r.commonAncestorContainer,el=an.nodeType===1?an:an.parentElement,rt=el&&el.closest(".rt");
+  if(!rt)return;
+  if(r.collapsed){toast("Selecione o texto que quer grifar");return;}
+  const mk=el.closest("mark"),solta=m=>m.replaceWith(...m.childNodes);
+  if(n===0||(mk&&mk.className==="g"+n)){
+    if(mk)solta(mk);else rt.querySelectorAll("mark").forEach(m=>{if(r.intersectsNode(m))solta(m);});
+  }else{
+    rt.querySelectorAll("mark").forEach(m=>{if(r.intersectsNode(m))solta(m);});
+    const m=document.createElement("mark");m.className="g"+n;m.appendChild(r.extractContents());r.insertNode(m);
+  }
+  rt.normalize();sel.removeAllRanges();
+  rt.dispatchEvent(new Event("input",{bubbles:true}));
+}
 function blocoPreg(b){
   if(b.tipo==="biblico")return `<div class="bl bib"><div class="bt">📖 ${esc(b.ref)}</div>${(b.t||textoRef(b.ref))?`<div>${esc(b.t||textoRef(b.ref))}</div>`:""}</div>`;
   if(b.tipo==="lista")return `<div class="bl"><ul>${b.t.split("\n").filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
@@ -1502,29 +1542,43 @@ function blocoPreg(b){
   if(b.tipo==="citacao")return `<div class="bl"><blockquote class="cit">“${esc(b.t)}”${b.aut?`<cite>— ${esc(b.aut)}</cite>`:""}</blockquote></div>`;
   return `<div class="bl obs">${esc(b.t)}</div>`;
 }
+function bvDe(s,t){
+  let bv=t&&(t.blocos.find(b=>b.tipo==="biblico"&&(b.t||b.ref))||(t.ref?{ref:t.ref,t:""}:null));
+  if(!bv&&s.base)bv={ref:s.base,t:""};
+  return bv?{ref:bv.ref,t:bv.t||textoRef(bv.ref)}:null;
+}
+const sheetIn=bv=>`<small>VERSÍCULO BASE</small><b>${esc(bv.ref||"")}</b>${bv.t?(P&&P.sheet?`<p>${esc(bv.t)}</p>`:`<div class="l1">${esc(bv.t.replace(/\n/g," "))}</div>`):""}`;
 function desenharPregar(){
   const s=sermao(P.id),n=s.topicos.length,t=s.topicos[P.i],prox=s.topicos[P.i+1];
-  let bv=t&&(t.blocos.find(b=>b.tipo==="biblico"&&(b.t||b.ref))||(t.ref?{ref:t.ref,t:""}:(s.base?{ref:s.base,t:""}:null)));
-  if(bv)bv={ref:bv.ref,t:bv.t||textoRef(bv.ref)};
+  const roll=s.modo==="rolagem";P.roll=roll;
+  const st0=(roll&&P.rolled)?((document.querySelector(".pcont")||{}).scrollTop||0):0;
+  const bv=bvDe(s,t);
   let h=`<div class="pbar"><button class="ib" data-a="sair" aria-label="Sair do modo pregar">←</button>
     <div class="pill"><small>HORA ATUAL</small><b id="hora">00:00</b></div>
     <div class="pill tm2"><small>TEMPO DE MENSAGEM</small><b id="time">00:00</b><button id="go" data-a="go" aria-label="Iniciar ou pausar">▶</button></div>
     <button class="ib pl-btn" data-a="lista" aria-label="Lista de tópicos">${ico("list",20)}</button><button class="ib" data-a="ajustes" aria-label="Ajustes">⚙</button></div>
-  <div class="ptop" id="ptop">${n?s.topicos.map((x,i)=>`<button class="${i<P.i?"done":i===P.i?"cur":""}" style="--w:${Math.max(palT(x),20)}" data-a="irt" data-v="${i}" aria-label="Tópico ${i+1}: ${esc(x.titulo||"")}"></button>`).join(""):""}<i id="tmark"></i></div>
+  <div class="ptop" id="ptop">${n&&(!roll||n>1)?s.topicos.map((x,i)=>`<button class="${i<P.i?"done":i===P.i?"cur":""}" style="--w:${Math.max(palT(x),20)}" data-a="irt" data-v="${i}" aria-label="Tópico ${i+1}: ${esc(x.titulo||"")}"></button>`).join(""):""}<i id="tmark"></i></div>
   <div class="pmeta"><span>TÓPICO ${n?P.i+1:0} DE ${n}</span>${prox?`<button data-a="lista">Próximo: ${esc(prox.titulo)} ⌄</button>`:(n?`<button data-a="lista">Último tópico ⌄</button>`:"")}</div>
   <div class="pcont"><div class="pc">`;
   if(!t)h+=`<div class="vz">Esta mensagem ainda não tem tópicos.</div>`;
   else{
-    h+=`<h1>${P.i+1}. ${esc(t.titulo)}</h1>${P.i===0&&s.titulo?`<div class="sr">${esc(s.titulo)}</div>`:`<div class="sr"></div>`}${t.blocos.map(blocoPreg).join("")||`<div class="vz">Sem anotações neste tópico.</div>`}`;
+    if(roll)h+=`${s.titulo?`<h1>${esc(s.titulo)}</h1>`:""}`+s.topicos.map((x,k)=>`${n>1||(x.titulo&&x.titulo!=="Texto do sermão")?`<h2 class="rh" id="tp${k}">${n>1?(k+1)+". ":""}${esc(x.titulo||"")}</h2>`:`<span id="tp${k}"></span>`}${x.blocos.map(blocoPreg).join("")}`).join("");
+    else h+=`<h1>${P.i+1}. ${esc(t.titulo)}</h1>${P.i===0&&s.titulo?`<div class="sr">${esc(s.titulo)}</div>`:`<div class="sr"></div>`}${t.blocos.map(blocoPreg).join("")||`<div class="vz">Sem anotações neste tópico.</div>`}`;
   }
   h+=`</div></div>`;
-  if(bv)h+=`<button class="sheet" data-a="psheet"><small>VERSÍCULO BASE</small><b>${esc(bv.ref||"")}</b>${bv.t?(P.sheet?`<p>${esc(bv.t)}</p>`:`<div class="l1">${esc(bv.t.replace(/\n/g," "))}</div>`):""}</button>`;
+  if(bv)h+=`<button class="sheet" id="psh" data-a="psheet">${sheetIn(bv)}</button>`;
   h+=`<div class="prail"><small>TÓPICOS</small>${s.topicos.map((x,i)=>`<button class="${i===P.i?"on":""}" data-a="irt" data-v="${i}"><span class="num">${i+1}</span><span>${esc(x.titulo||"Sem título")}</span></button>`).join("")}</div>
   <div class="pside"><button class="sa2" data-a="ant" ${P.i<=0?"disabled":""} aria-label="Tópico anterior">${ico("chev",26)}<small>Anterior</small></button><button class="sn2" data-a="prox" ${P.i>=n-1?"disabled":""} aria-label="Próximo tópico">${ico("chev",34)}<b>Próximo</b><small>${n?P.i+1+" de "+n:""}</small></button></div>
   <div class="pnav"><button class="btn" data-a="ant" ${P.i<=0?"disabled style='opacity:.4'":""}>‹ Anterior</button><button class="btn gold" data-a="prox" ${P.i>=n-1?"disabled style='opacity:.4'":""}>Próximo ›</button></div>`;
   $("preach").innerHTML=h;
   $("preach").style.setProperty("--nf",db.cfg.fonte+"px");
-  const c=document.querySelector(".pcont");if(c)c.scrollTop=0;
+  const c=document.querySelector(".pcont");if(c)c.scrollTop=st0;
+  P.rolled=roll;$("preach").classList.toggle("roll",roll);
+  if(roll&&c&&n>1)c.onscroll=()=>{
+    const lim=c.getBoundingClientRect().top+c.clientHeight*.25;let k=0;
+    s.topicos.forEach((x,j)=>{const e=$("tp"+j);if(e&&e.getBoundingClientRect().top<=lim)k=j;});
+    if(k!==P.i){P.i=k;document.querySelectorAll("#ptop button").forEach((b,j)=>{b.className=j<k?"done":j===k?"cur":"";});const sh=$("psh"),bb=bvDe(s,s.topicos[k]);if(sh&&bb)sh.innerHTML=sheetIn(bb);}
+  };
   const on=document.querySelector(".prail .on");if(on)on.scrollIntoView({block:"nearest"});
   atualizar();
 }
@@ -1533,13 +1587,13 @@ function atualizar(){
   const el=elapsed(),rest=P.total-el,f=fase(rest,P.total),d=new Date();
   if(P.fase!==null&&P.t0&&RANK[f]>RANK[P.fase])aviso(f);
   P.fase=f;
-  $("preach").className="show ph-"+f+(f==="over"?" over":"");
+  $("preach").className="show ph-"+f+(f==="over"?" over":"")+(P.roll?" roll":"");
   $("hora").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
   $("time").textContent=f==="over"?"+"+fmt(-rest):(db.cfg.modo==="regressivo"?fmt(rest):fmt(el));
   const tm=$("tmark");if(tm)tm.style.left=Math.min(100,el/P.total*100)+"%";
   $("go").textContent=P.t0?"❚❚":"▶";
 }
-function irTopico(d){const s=sermao(P.id),j=P.i+d;if(j<0||j>=s.topicos.length)return;P.i=j;P.sheet=false;desenharPregar();}
+function irTopico(d){if(P.roll)return;const s=sermao(P.id),j=P.i+d;if(j<0||j>=s.topicos.length)return;P.i=j;P.sheet=false;desenharPregar();}
 function abrirListaT(){
   const s=sermao(P.id);
   $("mb").innerHTML=`<h3>Tópicos</h3><div class="lista">${s.topicos.map((t,i)=>`<button data-a="irt" data-v="${i}">${i+1}. ${esc(t.titulo)}${t.ref?` <span class="rf">${esc(t.ref)}</span>`:""}</button>`).join("")}</div><div class="bar"><button class="btn" data-a="fechar">Fechar</button></div>`;
@@ -1692,6 +1746,7 @@ const MODELOS={
   blank:["Em branco",[""],"Um tópico vazio. Você monta do seu jeito."]
 };
 let NV={modelo:"expo",min:30};
+let IMP={manter:false};
 function abrirNovo(pre){
   NV={modelo:"expo",min:30,pre:pre||null};
   $("mb").innerHTML=`<h3>Nova mensagem</h3>
@@ -1797,7 +1852,9 @@ document.addEventListener("click",e=>{
   else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();}
   else if(a==="bsobe"||a==="bdesce"){const t=achaT(b);mover(t.blocos,v,a==="bsobe"?-1:1);}
   else if(a==="bdel"){const t=achaT(b);t.blocos=t.blocos.filter(x=>x.id!==v);salvar();rerender();}
-  else if(a==="fmt"){document.execCommand(v);}
+  else if(a==="fmt"){if(/^g\d$/.test(v))grifar(+v[1]);else document.execCommand(v);}
+  else if(a==="modoP"){const s=cur();s.modo=v==="rolagem"?"rolagem":"topicos";s.at=Date.now();salvar();rerender();}
+  else if(a==="impmodo"){IMP.manter=v==="arquivo";document.querySelectorAll("[data-a=impmodo]").forEach(x=>x.classList.toggle("on",x.dataset.v===v));}
   else if(a==="sobe")mover(cur().topicos,v,-1);
   else if(a==="desce")mover(cur().topicos,v,1);
   else if(a==="delt"){const s=cur(),t=achaT(b);s.topicos=s.topicos.filter(x=>x.id!==t.id);salvar();rerender();}
@@ -1815,7 +1872,7 @@ document.addEventListener("click",e=>{
   else if(a==="ant")irTopico(-1);
   else if(a==="psheet"){P.sheet=!P.sheet;desenharPregar();}
   else if(a==="lista")abrirListaT();
-  else if(a==="irt"){fechar();P.i=+v;P.sheet=false;desenharPregar();}
+  else if(a==="irt"){fechar();P.i=+v;P.sheet=false;if(P.roll){const e=$("tp"+v);if(e)e.scrollIntoView({behavior:"smooth",block:"start"});}else desenharPregar();}
   else if(a==="ajustes")abrirAjustes();
   else if(a==="zerar"){P.acc=0;P.t0=null;P.fase=null;atualizar();fechar();}
   else if(a==="mais"){P.total+=300000;atualizar();toast("+5 min");}
