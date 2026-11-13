@@ -381,18 +381,24 @@ function refDe(txt){
 }
 /* ---------- Bíblia (Almeida Corrigida Fiel) ---------- */
 const VERS={acf:{n:"ACF",d:"Almeida Corrigida Fiel (português)"},kjv:{n:"KJV",d:"King James (inglês)",f:"bib-kjv.json"},bbe:{n:"BBE",d:"Bible in Basic English",f:"bib-bbe.json"}};
+const versList=()=>Object.assign({},VERS,Object.fromEntries(((db.cfg&&db.cfg.custom)||[]).map(c=>[c.k,{n:c.n,d:c.n+" (sua cópia, só neste aparelho)",custom:true}])));
+function idb(){return new Promise((ok,err)=>{const r=indexedDB.open("pulpito",1);r.onupgradeneeded=()=>r.result.createObjectStore("bib");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
+async function idbGet(k){const d=await idb();return new Promise((ok,err)=>{const q=d.transaction("bib").objectStore("bib").get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>err(q.error);});}
+async function idbSet(k,v){const d=await idb();return new Promise((ok,err)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").put(v,k);t.oncomplete=()=>ok();t.onerror=()=>err(t.error);});}
+async function idbDel(k){const d=await idb();return new Promise((ok)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").delete(k);t.oncomplete=()=>ok();});}
 let BIBS={},BN=null,BNv=null;
 function bib(v){
   v=v||db.cfg.versao||"acf";
   if(v==="acf"&&!BIBS.acf){try{BIBS.acf=JSON.parse($("bib").textContent);}catch(e){BIBS.acf=[];}}
-  return BIBS[v]||BIBS.acf||bib("acf");
+  return BIBS[v]||(v==="acf"?[]:bib("acf"));
 }
 async function trocaVersao(v){
+  const info=versList()[v];if(!info)return;
   if(v!=="acf"&&!BIBS[v]){
-    toast("Baixando "+VERS[v].n+"...",8000);
-    try{const r=await fetch(VERS[v].f);if(!r.ok)throw 0;BIBS[v]=await r.json();}
-    catch(e){toast("Não consegui baixar "+VERS[v].n+". Conecte à internet uma vez.",3200);return;}
-    toast(VERS[v].n+" pronta. Fica salva para usar offline.",2200);
+    try{
+      if(info.custom){const d=await idbGet(v);if(!d)throw 0;BIBS[v]=d;}
+      else{toast("Baixando "+info.n+"...",8000);const r=await fetch(VERS[v].f);if(!r.ok)throw 0;BIBS[v]=await r.json();toast(info.n+" pronta. Fica salva para usar offline.",2200);}
+    }catch(e){toast("Não consegui carregar "+info.n+(info.custom?". Adicione de novo.":". Conecte à internet uma vez."),3200);return;}
   }
   db.cfg.versao=v;BN=null;salvar();
   if(V.tela==="edit")rerender();else render();
@@ -406,9 +412,9 @@ function parseRef(ref){
   const n=B[l][c-1].length;
   return{l,c,v1:m[3]?+m[3]:1,v2:m[3]?Math.min(n,+(m[4]||m[3])):n,todo:!m[3]};
 }
-function textoRef(ref){
+function textoRef(ref,v){
   const r=parseRef(ref);if(!r)return"";
-  const vs=bib("acf")[r.l][r.c-1];let o=[];
+  const vs=(bib(v||db.cfg.versao||"acf")[r.l]||[])[r.c-1]||bib("acf")[r.l][r.c-1];let o=[];
   for(let v=r.v1;v<=r.v2&&v<=vs.length;v++)o.push(v+" "+vs[v-1]);
   return o.join("\n");
 }
@@ -465,7 +471,7 @@ if(!db.semeado&&!db.sermoes.length){
 }
 function ajustar(){
   if(!db||!Array.isArray(db.sermoes))db={sermoes:[],semeado:true};
-  db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0},db.cfg||{});
+  db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,custom:[]},db.cfg||{});
   db.eventos=db.eventos||[];db.pastas=db.pastas||[];
   db.sermoes.forEach(s=>{
     s.status=s.status||"rascunho";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
@@ -495,7 +501,7 @@ function render(){
 }
 function metaEv(e){return dataBR(e.data)+(e.hora?" · "+e.hora:"")+(e.local?" · "+esc(e.local):"");}
 const VDIA=["Salmos 23:1","João 3:16","Filipenses 4:13","Provérbios 3:5-6","Isaías 41:10","Romanos 8:28","Josué 1:9","Mateus 11:28","Salmos 46:1","Jeremias 29:11","2 Coríntios 5:17","Salmos 119:105","Hebreus 11:1","Marcos 4:39","Gálatas 2:20","Salmos 27:1","Efésios 2:8-9","Tiago 1:5","1 Pedro 5:7","Salmos 37:5","Lamentações 3:22-23","Romanos 12:2","Mateus 6:33","Isaías 40:31","Salmos 121:1-2","João 14:6","Colossenses 3:23","Salmos 34:8","Filipenses 4:6-7","Apocalipse 21:4","Salmos 91:1-2"];
-function versoDoDia(){const d=new Date(),n=Math.floor((d-new Date(d.getFullYear(),0,0))/864e5),ref=VDIA[n%VDIA.length];return{ref,t:textoRef(ref).split("\n").map(l=>l.replace(/^\d+ /,"")).join(" ")};}
+function versoDoDia(){const d=new Date(),n=Math.floor((d-new Date(d.getFullYear(),0,0))/864e5),ref=VDIA[n%VDIA.length];return{ref,t:textoRef(ref,"acf").split("\n").map(l=>l.replace(/^\d+ /,"")).join(" ")};}
 function renderInicio(){
   const ev=proxEventos(),evMsg=ev.find(e=>e.msgId&&sermao(e.msgId));
   const alvo=evMsg?sermao(evMsg.msgId):(db.sermoes.filter(s=>s.status==="pronto").sort((a,b)=>b.at-a.at)[0]||db.sermoes.slice().sort((a,b)=>b.at-a.at)[0]);
@@ -566,7 +572,7 @@ function renderBiblia(){
   if(V.bk===null){
     const ult=c.ult;
     h=`<div class="top"><h1>Bíblia</h1></div>
-    <div class="seg">${Object.keys(VERS).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}" title="${VERS[k].d}">${VERS[k].n}</button>`).join("")}</div>
+    <div class="seg">${Object.keys(versList()).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}" title="${versList()[k].d}">${versList()[k].n}</button>`).join("")}</div>
     <input class="search" id="bq" type="search" placeholder="Buscar palavra ou ir a um texto (ex.: Jo 3:16)" value="${esc(V.bq)}">
     <div id="bres">${resBusca()}</div>`;
     if(!V.bq.trim()){
@@ -584,7 +590,7 @@ function renderBiblia(){
     <button class="ib ${mk?"star on":""}" style="position:static" data-a="bmarca" aria-label="Marcar capítulo">${mk?"★":"☆"}</button></div>
     <div class="rd" style="--bf:${c.bf}px">${vs.map((t,i)=>`<p class="${c.dest[k+(i+1)]?"hl":""} ${V.alvo===i+1?"alvo":""}" data-a="vs" data-v="${i+1}"><sup>${i+1}</sup>${esc(t)}</p>`).join("")}</div>
     <div class="pnav" style="padding:0"><button class="btn" data-a="bant">‹ Anterior</button><button class="btn gold" data-a="bprox">Próximo ›</button></div>
-    <div class="seg" style="margin-top:14px">${Object.keys(VERS).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}">${VERS[k].n}</button>`).join("")}</div><p class="meta">Toque num versículo para destacar. ${VERS[db.cfg.versao||"acf"].d}.</p>`;
+    <div class="seg" style="margin-top:14px">${Object.keys(versList()).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}">${versList()[k].n}</button>`).join("")}</div><p class="meta">Toque num versículo para destacar. ${(versList()[db.cfg.versao||"acf"]||VERS.acf).d}.</p>`;
   }
   $("app").innerHTML=h+nav();
   if(V.alvo){const e=document.querySelector(".rd p.alvo");if(e)e.scrollIntoView({block:"center"});V.alvo=0;}
@@ -624,8 +630,9 @@ function renderMais(){
   <div class="rows"><div class="rw st"><span class="ic">◐</span><span class="rt2"><b>Tema</b></span></div>
   <div class="seg" style="margin:0 14px 14px">${[["auto","Automático"],["claro","Claro"],["escuro","Escuro"]].map(([k,n])=>`<button class="${c.tema===k?"on":""}" data-a="tema" data-v="${k}">${n}</button>`).join("")}</div></div>
   <div class="gt">Bíblia</div>
-  <div class="rows"><div class="rw st"><span class="ic">📖</span><span class="rt2"><b>Versão</b><small>${VERS[ver].d}</small></span></div>
-  <div class="seg" style="margin:0 14px 14px">${Object.keys(VERS).map(k=>`<button class="${ver===k?"on":""}" data-a="versao" data-v="${k}">${VERS[k].n}</button>`).join("")}</div>
+  <div class="rows"><div class="rw st"><span class="ic">📖</span><span class="rt2"><b>Versão</b><small>${(versList()[ver]||VERS.acf).d}</small></span></div>
+  <div class="seg" style="margin:0 14px 14px">${Object.keys(versList()).map(k=>`<button class="${ver===k?"on":""}" data-a="versao" data-v="${k}">${versList()[k].n}</button>`).join("")}</div>
+  ${linha("＋","Adicionar minha Bíblia","Ex.: NVI, ARA ou NAA do seu arquivo","addbib")}
   ${linha("A","Tamanho da letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>
   <div class="gt">Pregação</div>
   <div class="rows">${linha("🔔","Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha("⏱","Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha("A","Tamanho da letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>
@@ -1021,6 +1028,37 @@ function abrirPasta(){
   $("modal").classList.add("show");
 }
 
+/* ---------- Bíblia própria (fica só neste aparelho) ---------- */
+function abrirAddBib(){
+  const cs=db.cfg.custom||[];
+  $("mb").innerHTML=`<h3>Adicionar minha Bíblia</h3>
+  <p class="meta">Use o seu arquivo da NVI, ARA, NAA ou outra tradução. Ele é guardado só neste aparelho e não vai para a internet.</p>
+  <p class="meta" style="margin-top:8px">Formato aceito: arquivo <b>.json</b> com os 66 livros, cada um com a lista de capítulos e versículos (o formato comum "bible json", com <b>chapters</b>).</p>
+  <label class="f" for="bibn">Nome da versão</label><input class="in" id="bibn" placeholder="Ex.: NVI" maxlength="8" value="NVI">
+  <label class="btn gold" for="bibf" style="display:flex;align-items:center;justify-content:center;width:100%;margin:14px 0 6px">📂 Escolher arquivo .json</label>
+  <input type="file" id="bibf" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
+  ${cs.length?`<div class="gt">Suas versões</div>`+cs.map(c=>`<div class="hist"><span>${esc(c.n)}</span><button data-a="rmbib" data-v="${c.k}" aria-label="Remover">✕</button></div>`).join(""):""}
+  <div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
+  $("modal").classList.add("show");
+}
+async function lerBibliaPropria(f){
+  try{
+    let d=JSON.parse((await f.text()).replace(/^\uFEFF/,""));
+    if(d&&!Array.isArray(d)&&d.books)d=d.books;
+    const liv=d.map(b=>Array.isArray(b)?b:(b.chapters||b.chapter||null));
+    if(liv.length!==66||liv.some(l=>!Array.isArray(l)||!l.length))throw 0;
+    const norm2=liv.map(l=>l.map(c=>Array.isArray(c)?c.map(String):Object.values(c).map(String)));
+    const nome=(($("bibn")&&$("bibn").value)||"Minha").trim().slice(0,8)||"Minha",k="c"+uid();
+    await idbSet(k,norm2);BIBS[k]=norm2;
+    db.cfg.custom=(db.cfg.custom||[]).concat([{k,n:nome}]);db.cfg.versao=k;BN=null;salvar();
+    fechar();render();toast(nome+" adicionada ("+norm2.reduce((a,l)=>a+l.reduce((x,c)=>x+c.length,0),0).toLocaleString("pt-BR")+" versículos)",3000);
+  }catch(e){toast("Arquivo não reconhecido. Precisa ter os 66 livros com capítulos.",3600);}
+}
+async function carregaPropriasBiblias(){
+  const cs=(db.cfg.custom||[]);let alguma=false;
+  for(const c of cs){try{const d=await idbGet(c.k);if(d){BIBS[c.k]=d;alguma=true;}}catch(e){}}
+  if(alguma&&V.tela==="lista")render();
+}
 /* ---------- Novo sermão ---------- */
 const MODELOS={
   expo:["Expositivo",["Introdução","Primeiro ponto","Segundo ponto","Terceiro ponto","Aplicação","Conclusão"],"Segue o texto bíblico passo a passo, com 3 pontos, aplicação e conclusão."],
@@ -1110,6 +1148,8 @@ document.addEventListener("click",e=>{
   else if(a==="rest-sub"||a==="rest-add")aplicarRestauro(a==="rest-sub");
   else if(a==="bmais2"||a==="bmenos2"){db.cfg.bf=Math.min(34,Math.max(14,db.cfg.bf+(a==="bmais2"?2:-2)));salvar();renderMais();}
   else if(a==="nada"){}
+  else if(a==="addbib")abrirAddBib();
+  else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];idbDel(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
   else if(a==="det"){V.det=!V.det;rerender();}
   else if(a==="voltar"||a==="ok"){if(a==="ok")toast("Salvo");salvar();V.tela="lista";V.apagar=null;render();}
   else if(a==="tempo"){const s=cur();s.min=+v;s.at=Date.now();salvar();rerender();}
@@ -1182,6 +1222,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   if(e.target.id==="arq"&&e.target.files&&e.target.files[0])importarArquivo(e.target.files[0]);
+  if(e.target.id==="bibf"&&e.target.files&&e.target.files[0])lerBibliaPropria(e.target.files[0]);
   if(e.target.id==="rest"&&e.target.files&&e.target.files[0])e.target.files[0].text().then(lerRestauro);
   if(e.target.dataset&&e.target.dataset.b==="ref"&&V.tela==="edit"){const t=achaT(e.target),bl=t.blocos.find(x=>x.id===e.target.closest("[data-bid]").dataset.bid),tx=textoRef(bl.ref);if(tx&&!bl.t){bl.t=tx;salvar();rerender();}}
 });
@@ -1217,7 +1258,7 @@ document.addEventListener("keydown",e=>{
   else if(P&&!$("modal").classList.contains("show")){if(e.key==="ArrowRight")irTopico(1);else if(e.key==="ArrowLeft")irTopico(-1);else if(e.key===" "){e.preventDefault();$("go").click();}}
 });
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)travarTela();});
-render();
+render();carregaPropriasBiblias();
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
