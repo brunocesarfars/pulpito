@@ -1364,21 +1364,51 @@ async function lerPDF(buf){
       r.its.sort((a,b)=>a.x-b.x);
       let t="";r.its.forEach((it,k)=>{if(k){const pv=r.its[k-1];if(it.x-(pv.x+pv.w)>it.sz*.15&&!/\s$/.test(t)&&!/^\s/.test(it.s))t+=" ";}t+=it.s;});
       t=t.replace(/\s+/g," ").trim();if(!t)return;
-      linhas.push({t,sz:Math.max(...r.its.map(i=>i.sz)),b:r.its.every(i=>i.b||!i.s.trim()),y:r.y,pg:p});
+      const vw=pg.view||[0,0,1,842];linhas.push({t,sz:Math.max(...r.its.map(i=>i.sz)),b:r.its.every(i=>i.b||!i.s.trim()),y:r.y,pg:p,yr:(r.y-vw[1])/((vw[3]-vw[1])||842)});
     });
   }
   if(linhas.reduce((a,l)=>a+l.t.length,0)<20)throw new Error("sem-texto");
+  /* tira número de página e cabeçalho/rodapé repetido */
+  const chave=t=>t.toLowerCase().replace(/\d+/g,"#");
+  const reps={};linhas.forEach(l=>{if(l.yr>.9||l.yr<.1){const k=chave(l.t)+"|"+l.pg;if(!reps[k]){reps[k]=1;reps[chave(l.t)]=(reps[chave(l.t)]||0)+1;}}});
+  const npg=doc.numPages;
+  const util=linhas.filter(l=>{
+    if(/^\s*(p[áa]g(ina)?\.?\s*)?\d{1,4}(\s*(de|\/)\s*\d{1,4})?\s*$/i.test(l.t)&&(l.yr>.85||l.yr<.15))return false;
+    if((l.yr>.9||l.yr<.1)&&npg>=3&&(reps[chave(l.t)]||0)>=Math.min(3,npg))return false;
+    return true;
+  });
+  if(util.reduce((a,l)=>a+l.t.length,0)>=20){linhas.length=0;util.forEach(l=>linhas.push(l));}
   const ord=linhas.slice().sort((a,b)=>a.sz-b.sz),tot=ord.reduce((a,l)=>a+l.t.length,0);
   let acc=0,med=ord[0].sz;for(const l of ord){acc+=l.t.length;if(acc>=tot/2){med=l.sz;break;}}
+  /* espaçamento normal entre linhas do mesmo parágrafo */
+  const gaps=[];linhas.forEach((l,i)=>{const a=linhas[i-1];if(a&&a.pg===l.pg){const g=a.y-l.y;if(g>l.sz*.6&&g<l.sz*2.2)gaps.push(g);}});
+  gaps.sort((a,b)=>a-b);const lead=gaps.length?gaps[Math.floor(gaps.length/2)]:med*1.3;
+  const abv=i=>{const a=linhas[i-1];return a&&a.pg===linhas[i].pg?a.y-linhas[i].y:1e9;};
+  const blw=i=>{const n=linhas[i+1];return n&&n.pg===linhas[i].pg?linhas[i].y-n.y:1e9;};
+  const FIM=/[.!?:”"…)]$/;
   const bl=[];let ant=null;
-  linhas.forEach(l=>{
-    const tit=l.t.length<120&&(l.sz>=med*1.12||(l.b&&l.t.length<90)||ehTitulo(l.t));
-    const ult=bl[bl.length-1];
-    if(tit){
-      if(ult&&ult.k==="h"&&ant&&ant.pg===l.pg&&ant.sz===l.sz&&ant.y-l.y<l.sz*2.2)ult.t+=" "+l.t;
-      else bl.push({k:"h",t:l.t});
-    }else{
-      const novo=!ult||ult.k==="h"||!ant||(ant.pg===l.pg&&ant.y-l.y>l.sz*1.7)||(ant.pg!==l.pg&&/[.!?:”"]$/.test(ult.t));
+  linhas.forEach((l,i)=>{
+    const ult=bl[bl.length-1],ga=abv(i),gb=blw(i);
+    const estilo=l.sz>=med*1.12||l.b;
+    const contH=ult&&ult.k==="h"&&ant&&ant.pg===l.pg&&Math.abs(ant.sz-l.sz)<.6&&ant.b===l.b&&estilo&&ga<lead*1.35&&l.t.length<120&&ult.t.length<120&&!FIM.test(ult.t);
+    const letras=l.t.replace(/[^A-Za-zÀ-ú]/g,"");
+    const caps=letras.length>=4&&l.t===l.t.toUpperCase();
+    const numer=RX_TIT.test(l.t)&&!/^\d{1,3}\s*[\.\)]?\s*$/.test(l.t);
+    const solta=ga>lead*1.3&&gb>lead*1.3;
+    const cont=/^[a-zà-ú,;)\]]/.test(l.t)||/[,;]$/.test(l.t)||/^\(?[A-Z]{2,6}\)?$/.test(l.t.trim())||letras.length<3;
+    let tit=false;
+    if(l.t.length<120&&!cont){
+      if(numer&&l.t.length<100&&(estilo||ga>lead*1.3||gb>lead*1.3||(l.t.length<70&&!/[.!?]$/.test(l.t))))tit=true;
+      else if(l.sz>=med*1.12&&(ga>lead*1.3||gb>lead*1.3||l.b))tit=true;
+      else if(l.b&&l.t.length<90&&solta)tit=true;
+      else if(caps&&l.t.length<90&&solta)tit=true;
+    }
+    if(contH)ult.t+=" "+l.t;
+    else if(tit)bl.push({k:"h",t:l.t});
+    else{
+      const sobe=ga>Math.max(lead*1.45,l.sz*1.5)||(ant&&ant.pg!==l.pg);
+      const sobreviveFrase=/^[a-zà-ú]/.test(l.t)&&ult&&ult.k==="p"&&!FIM.test(ult.t);
+      const novo=!ult||ult.k==="h"||!ant||(sobe&&!sobreviveFrase&&(ant.pg===l.pg||FIM.test(ult.t)));
       if(novo)bl.push({k:"p",t:l.t});
       else if(/[a-zà-ú]-$/.test(ult.t)&&/^[a-zà-ú]/.test(l.t))ult.t=ult.t.slice(0,-1)+l.t;
       else ult.t+=" "+l.t;
@@ -1395,7 +1425,7 @@ function limparRef(titulo,ref){
 function estruturar(bl,arq){
   bl=bl.filter(b=>b.t&&b.t.trim());
   if(!bl.length)return null;
-  bl.forEach(b=>{if(b.k==="p"&&ehTitulo(b.t))b.k="h";});
+  bl.forEach(b=>{if(b.k==="p"&&ehTitulo(b.t)&&!/^[a-zà-ú]/.test(b.t)&&!/[,;]$/.test(b.t))b.k="h";});
   const temH=bl.some(b=>b.k==="h");
   let titulo="",i=0;
   if(bl[0].k==="h"&&!RX_TIT.test(bl[0].t)){titulo=bl[0].t;i=1;}
@@ -1413,7 +1443,7 @@ function estruturar(bl,arq){
       if(c&&!c.p.length)c.t+=" – "+b.t;
       else{c={t:b.t,p:[]};tops.push(c);}
     }else{
-      if(!c&&!tops.length&&b.t.length<90&&refDe(b.t)===b.t.trim().replace(/^texto base:?\s*/i,"")){continue;}
+      if(!c&&!tops.length&&b.t.length<90&&refDe(b.t)===b.t.trim().replace(/^texto base:?\s*/i,"").replace(/\s*\(?\b(NAA|NVI|NVT|NTLH|ARA|ARC|ACF|KJV|AA)\b\)?\s*$/i,"")){continue;}
       if(!c){c={t:tops.length?"":"Introdução",p:[],auto:true};tops.push(c);}
       c.p.push(b.t);
     }
