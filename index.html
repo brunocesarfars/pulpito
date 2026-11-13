@@ -977,7 +977,7 @@ function ajustar(){
 ajustar();aplicaTema();
 try{matchMedia("(prefers-color-scheme: light)").addEventListener("change",aplicaTema);}catch(e){}
 let saveT;
-function salvar(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}},250);}
+function salvar(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}if(typeof syncTouch==="function")syncTouch();},250);}
 function toast(t,ms){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),ms||1800);}
 const sermao=id=>db.sermoes.find(s=>s.id===id);
 const livrosDo=s=>{const set=new Set();s.topicos.forEach(t=>{const l=livroDe(t.ref);if(l)set.add(l);});const b=livroDe(s.base);if(b)set.add(b);return LIVROS.filter(l=>set.has(l));};
@@ -1002,6 +1002,7 @@ const IC={
  bell:'<path d="M6 17V11a6 6 0 1112 0v6l2 2H4z"/><path d="M10 21h4"/>',
  timer:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 2.5h5"/>',
  type:'<path d="M4 6V4h16v2M9 20h6M12 4v16"/>',
+ cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>',
  cross:'<path d="M12 3v18M6 9h12"/>',
  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
@@ -1162,6 +1163,7 @@ function renderMais(){
   $("app").innerHTML=`<div class="top"><h1>Mais</h1></div>
   <button class="perfil" data-a="nome"><span class="av big">${esc((nm[0]||"P").toUpperCase())}</span><span class="rt2"><b>${nm?esc(nm):"Seu nome"}</b><small>${nm?"Toque para editar":"Toque para adicionar seu nome"}</small></span><span class="chev">${ico("chev",20)}</span></button>
   <div class="tiles2">
+  ${tile("conta","cloud","Conta e nuvem",contaSub())}
   ${tile("dados","down","Cópia de segurança",ultBk())}
   ${tile("import","file","Importar sermão","PDF, Word ou texto","import")}
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
@@ -1174,6 +1176,7 @@ function segV(lista,atual,acao){return `<div class="seg" style="flex-wrap:wrap;m
 function abrirSheet(k){
   SHEET=k;const c=db.cfg,ver=c.versao||"acf";let h="";
   if(k==="dados")h=`<h3>Cópia de segurança</h3><p class="meta" style="margin-bottom:12px">${ultBk()}. O arquivo guarda todos os seus sermões e a agenda.</p><div class="rows">${linha(ico("down",18),"Baixar cópia","Salva um arquivo no aparelho","baixar")}${linha(ico("up",18),"Restaurar cópia","De um arquivo salvo","restaurar")}</div>`;
+  else if(k==="conta"){h=contaSheet();if(!SY.ready)fbCarrega().catch(()=>{});}
   else if(k==="tema")h=`<h3>Aparência</h3>${segV([["auto","Automático"],["claro","Claro"],["escuro","Escuro"]],c.tema,"tema")}<p class="meta">Automático segue o tema do celular.</p>`;
   else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Adicionar minha Bíblia","NVI, ARA ou NAA do seu arquivo","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
   else if(k==="preg")h=`<h3>Pregação</h3><div class="rows">${linha(ico("bell",18),"Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha(ico("timer",18),"Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha(ico("type",18),"Letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>`;
@@ -1820,6 +1823,10 @@ document.addEventListener("click",e=>{
   else if(a==="fmais"||a==="fmenos"||a==="f2mais"||a==="f2menos"){db.cfg.fonte=Math.min(34,Math.max(14,db.cfg.fonte+(/mais/.test(a)?2:-2)));salvar();if(P){$("preach").style.setProperty("--nf",db.cfg.fonte+"px");abrirAjustes();}else refazSheet();}
   else if(a==="som"||a==="som2"){db.cfg.som=!db.cfg.som;salvar();if(P)abrirAjustes();else refazSheet();}
   else if(a==="modo"||a==="modo2"){db.cfg.modo=db.cfg.modo==="regressivo"?"crescente":"regressivo";salvar();if(P){abrirAjustes();atualizar();}else refazSheet();}
+  else if(a==="login")entrarGoogle();
+  else if(a==="logout")sairConta();
+  else if(a==="syncnow"){syncTouch();syncPush();toast("Sincronizando…");}
+  else if(a==="nada"){}
   else if(a==="tema"){db.cfg.tema=v;salvar();aplicaTema();refazSheet();}
   else if(a==="dia")abrirDia(v);
   else if(a==="mes"){let [y,m]=V.mes;m+=+v;if(m<0){m=11;y--;}if(m>11){m=0;y++;}V.mes=[y,m];renderAgenda();}
@@ -1893,6 +1900,149 @@ document.addEventListener("keydown",e=>{
   else if(P&&!$("modal").classList.contains("show")){if(e.key==="ArrowRight")irTopico(1);else if(e.key==="ArrowLeft")irTopico(-1);else if(e.key===" "){e.preventDefault();$("go").click();}}
 });
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)travarTela();});
+/* ---------- Conta e sincronização (Firebase) ---------- */
+const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
+const FBV="10.12.5";
+let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
+function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
+function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
+const hsh=o=>{const r=Object.assign({},o);delete r.u;const t=JSON.stringify(r);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
+const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr};};
+function syncTouch(){
+  const m=syncMeta(),now=Date.now(),vistos=new Set();
+  const itens=[...db.sermoes.map(x=>["s",x]),...db.eventos.map(x=>["e",x])];
+  itens.forEach(([k,o])=>{
+    vistos.add(o.id);const h=hsh(o);
+    if(o.u===undefined){o.u=k==="s"?(o.at||1):1;m.h[o.id]=h;}
+    else if(m.h[o.id]!==h){o.u=now;m.h[o.id]=h;}
+  });
+  Object.keys(m.h).forEach(id=>{if(id!=="_cfg"&&!vistos.has(id)){m.tomb[id]=now;delete m.h[id];}});
+  const ch=hsh({d:cfgSync()});
+  if(m.h._cfg===undefined){m.h._cfg=ch;m.cu=(db.cfg.nome||db.pastas.length)?1:0;}
+  else if(m.h._cfg!==ch){m.h._cfg=ch;m.cu=now;}
+  syncSave();
+  if(SY.user){clearTimeout(SY.pushT);SY.pushT=setTimeout(syncPush,1500);}
+}
+const syncEmUso=id=>(V.tela==="edit"&&V.id===id)||(P&&V.id===id);
+function syncApply(){
+  const m=syncMeta(),aplicados=[],rest=[];let mud=false,cfgMud=false;
+  SY.rq.forEach(r=>{
+    const id=r.id;
+    if(id==="_cfg"){
+      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
+      m.p._cfg=Math.max(m.p._cfg===undefined?-1:m.p._cfg,r.u);return;
+    }
+    const loc=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id);
+    if(r.del){
+      if(loc&&r.u>=loc.u){
+        if(syncEmUso(id)){rest.push(r);return;}
+        db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);delete m.h[id];mud=true;
+      }
+      m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);return;
+    }
+    if(!loc||r.u>loc.u){
+      if(m.tomb[id]&&m.tomb[id]>r.u){return;}
+      if(loc&&syncEmUso(id)){rest.push(r);return;}
+      let o;try{o=JSON.parse(r.d);}catch(e){return;}
+      o.u=r.u;
+      db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);
+      (r.k==="e"?db.eventos:db.sermoes).push(o);delete m.tomb[id];aplicados.push(id);mud=true;
+      m.p[id]=r.u;
+    }else m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);
+  });
+  SY.rq=rest;
+  if(mud){
+    ajustar();
+    aplicados.forEach(id=>{const o=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id);if(o)m.h[id]=hsh(o);});
+    if(cfgMud){m.h._cfg=hsh({d:cfgSync()});aplicaTema();}
+    try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}
+    if(!P&&V.tela==="lista"&&!$("modal").classList.contains("show"))render();
+  }
+  syncSave();
+  if(rest.length)setTimeout(syncApply,4000);
+}
+async function syncPush(){
+  if(!SY.user||!SY.fs||SY.envia)return;
+  if(!navigator.onLine){SY.estado="off";SY.msg="Sem internet. Envio quando voltar.";refazConta();return;}
+  const m=syncMeta(),col=SY.fs.collection("users").doc(SY.user.uid).collection("itens"),ops=[];
+  const add=(id,u,data)=>{if((m.p[id]===undefined?-1:m.p[id])>=u)return;ops.push({id,u,data});};
+  db.sermoes.forEach(o=>add(o.id,o.u,{k:"s",u:o.u,d:JSON.stringify(o)}));
+  db.eventos.forEach(o=>add(o.id,o.u,{k:"e",u:o.u,d:JSON.stringify(o)}));
+  Object.keys(m.tomb).forEach(id=>add(id,m.tomb[id],{del:true,u:m.tomb[id]}));
+  add("_cfg",m.cu,{k:"c",u:m.cu,d:JSON.stringify(cfgSync())});
+  if(!ops.length){SY.estado="ok";SY.msg="";refazConta();return;}
+  SY.envia=true;SY.estado="env";refazConta();
+  try{
+    for(let i=0;i<ops.length;i+=15){
+      const b=SY.fs.batch(),parte=ops.slice(i,i+15);
+      parte.forEach(o=>b.set(col.doc(o.id),o.data));
+      await b.commit();
+      parte.forEach(o=>{m.p[o.id]=o.u;});syncSave();
+    }
+    m.last=Date.now();SY.estado="ok";SY.msg="";
+  }catch(e){SY.estado="erro";SY.msg=erroFb(e);}
+  SY.envia=false;syncSave();refazConta();
+}
+function erroFb(e){
+  const c=(e&&e.code)||"";
+  if(c.includes("permission"))return "Sem permissão. Confira as regras do Firestore.";
+  if(c.includes("unavailable")||c.includes("network"))return "Sem conexão com a nuvem.";
+  if(c==="auth/popup-closed-by-user"||c==="auth/cancelled-popup-request")return "Login cancelado.";
+  if(c==="auth/unauthorized-domain")return "Domínio não autorizado no Firebase.";
+  if(c==="auth/operation-not-allowed")return "Ative o login Google no Firebase.";
+  if(c==="auth/popup-blocked")return "O navegador bloqueou a janela de login.";
+  return (e&&e.message)?e.message.slice(0,90):"Erro desconhecido.";
+}
+function refazConta(){if(SHEET==="conta"&&$("modal").classList.contains("show"))abrirSheet("conta");if(V.tela==="lista"&&V.tab==="mais"&&!$("modal").classList.contains("show"))renderMais();}
+function fbCarrega(){
+  if(SY.ready)return SY.ready;
+  const lista=["app","auth","firestore"].map(n=>`https://www.gstatic.com/firebasejs/${FBV}/firebase-${n}-compat.js`);
+  SY.ready=lista.reduce((p,s)=>p.then(()=>new Promise((ok,no)=>{const e=document.createElement("script");e.src=s;e.onload=ok;e.onerror=()=>no(new Error("Sem conexão com a internet."));document.head.appendChild(e);})),Promise.resolve())
+    .then(()=>{firebase.initializeApp(FBCFG);SY.fs=firebase.firestore();SY.auth=firebase.auth();SY.auth.onAuthStateChanged(syncUser);return SY.auth;})
+    .catch(e=>{SY.ready=null;throw e;});
+  return SY.ready;
+}
+function syncUser(u){
+  SY.user=u;
+  if(SY.unsub){SY.unsub();SY.unsub=null;}
+  if(!u){SY.estado="off";SY.msg="";refazConta();return;}
+  const m=syncMeta();m.logado=true;syncSave();
+  if(!db.cfg.nome&&u.displayName){db.cfg.nome=u.displayName.split(" ")[0].slice(0,24);salvar();}
+  SY.estado="env";refazConta();
+  let primeira=true;
+  SY.unsub=SY.fs.collection("users").doc(u.uid).collection("itens").onSnapshot(snap=>{
+    snap.docChanges().forEach(ch=>{if(ch.type!=="removed")SY.rq.push(Object.assign({id:ch.doc.id},ch.doc.data()));});
+    syncApply();
+    if(primeira){primeira=false;syncTouch();}
+    syncPush();
+  },e=>{SY.estado="erro";SY.msg=erroFb(e);refazConta();});
+}
+async function entrarGoogle(){
+  try{
+    SY.estado="env";SY.msg="";refazConta();
+    const a=await fbCarrega();
+    await a.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  }catch(e){SY.estado="erro";SY.msg=erroFb(e);refazConta();}
+}
+async function sairConta(){
+  try{const a=await fbCarrega();await a.signOut();}catch(e){}
+  const m=syncMeta();m.logado=false;syncSave();SY.estado="off";SY.msg="";refazConta();toast("Você saiu da conta");
+}
+function contaSub(){
+  if(!SY.user)return "Entrar com Google";
+  if(SY.estado==="erro")return "Erro de sincronização";
+  if(SY.estado==="env")return "Sincronizando…";
+  return "Sincronizado";
+}
+function ultSync(){const l=syncMeta().last;if(!l)return "Ainda não enviado";const mm=Math.round((Date.now()-l)/60000);return mm<1?"Última: agora":mm<60?"Última: há "+mm+" min":mm<1440?"Última: há "+Math.round(mm/60)+" h":"Última: há "+Math.round(mm/1440)+" d";}
+function contaSheet(){
+  const u=SY.user;
+  if(!u)return `<h3>Conta e nuvem</h3><p class="meta" style="margin-bottom:12px">Entre com sua conta Google para manter os sermões iguais no celular e no tablet. Tudo continua funcionando sem internet e sincroniza quando ela volta.</p>${SY.msg?`<p class="meta" style="color:var(--red,#e5604d);margin-bottom:10px">${esc(SY.msg)}</p>`:""}<div class="bar"><button class="btn gold" data-a="login">${SY.estado==="env"?"Conectando…":"Entrar com Google"}</button></div>`;
+  return `<h3>Conta e nuvem</h3><div class="rows">${linha(`<span class="av">${esc(((u.displayName||u.email||"P")[0]).toUpperCase())}</span>`,esc(u.displayName||"Conta Google"),esc(u.email||""),"nada","",``)}</div><p class="meta" style="margin:12px 0 4px">${SY.estado==="erro"?`<b style="color:var(--red,#e5604d)">${esc(SY.msg)}</b>`:SY.estado==="env"?"Sincronizando…":"Tudo sincronizado. "+ultSync()}</p><div class="rows" style="margin-top:8px">${linha(ico("up",18),"Sincronizar agora","Envia e recebe as mudanças","syncnow")}${linha(ico("info",18),"Sair da conta","Os sermões continuam neste aparelho","logout")}</div>`;
+}
+window.addEventListener("online",()=>{if(SY.user)syncPush();});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&SY.user)syncPush();});
+try{if(JSON.parse(localStorage.getItem("pulpito.sync")||"{}").logado&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
 render();carregaPropriasBiblias();
 if(!db.cfg.nome&&!db.cfg.nomeAsk){db.cfg.nomeAsk=true;salvar();setTimeout(abrirNome,700);}
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
