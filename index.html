@@ -325,7 +325,7 @@ nav.nav button{font-size:11px;gap:1px}
   .lista-msgs .sc{margin-bottom:0}
 }
 /* ---- Pregar deitado (tablet e celular na horizontal) ---- */
-.prail,.pside{display:none}
+.prail,.pside,.pl-btn{display:none}
 @media (orientation:landscape) and (min-width:640px){
   #preach.show{display:grid;grid-template-columns:230px minmax(0,1fr) 104px;grid-template-rows:auto auto 1fr auto;grid-template-areas:"bar bar bar" "prog prog prog" "rail cont side" "rail sheet side"}
   .pbar{grid-area:bar;max-width:none;margin:0;padding:10px 14px 8px;min-width:0}
@@ -364,6 +364,16 @@ nav.nav button{font-size:11px;gap:1px}
   .sheet{padding:5px 12px;margin-bottom:6px}.sheet small{display:none}.sheet b{font-size:13px}.sheet .l1{font-size:12px}
   .pside{padding:6px 12px 8px 4px}.pside .sn2 b{font-size:15px}
 }
+/* Barra de progresso do sermão (tópicos + marcador de tempo) */
+.ptop{position:relative;display:flex;gap:4px;max-width:560px;width:calc(100% - 24px);margin:0 auto;height:20px;align-items:center}
+.ptop button{flex:var(--w) 1 0;height:20px;position:relative;min-width:6px}
+.ptop button::after{content:"";position:absolute;left:0;right:0;top:7px;height:6px;border-radius:99px;background:var(--line);transition:background .3s}
+.ptop button.done::after{background:var(--gold)}
+.ptop button.cur::after{background:var(--gold-soft);box-shadow:inset 0 0 0 1.5px var(--gold)}
+#tmark{position:absolute;top:2px;width:4px;height:16px;border-radius:3px;background:var(--ph);transform:translateX(-2px);transition:left .25s linear,background .6s;pointer-events:none;box-shadow:0 0 0 2px var(--bg)}
+@media(min-width:700px){.ptop{max-width:860px}}
+@media (orientation:landscape) and (min-width:640px){.ptop{grid-area:prog;max-width:none;width:calc(100% - 28px);margin:0 14px}}
+@media (orientation:landscape) and (max-height:480px){.ptop{height:16px}.ptop button{height:16px}.ptop button::after{top:5px}#tmark{height:14px;top:1px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -1497,7 +1507,7 @@ function desenharPregar(){
     <div class="pill"><small>HORA ATUAL</small><b id="hora">00:00</b></div>
     <div class="pill tm2"><small>TEMPO DE MENSAGEM</small><b id="time">00:00</b><button id="go" data-a="go" aria-label="Iniciar ou pausar">▶</button></div>
     <button class="ib pl-btn" data-a="lista" aria-label="Lista de tópicos">${ico("list",20)}</button><button class="ib" data-a="ajustes" aria-label="Ajustes">⚙</button></div>
-  <div class="pprog"><i id="prog"></i></div>
+  <div class="ptop" id="ptop">${n?s.topicos.map((x,i)=>`<button class="${i<P.i?"done":i===P.i?"cur":""}" style="--w:${Math.max(palT(x),20)}" data-a="irt" data-v="${i}" aria-label="Tópico ${i+1}: ${esc(x.titulo||"")}"></button>`).join(""):""}<i id="tmark"></i></div>
   <div class="pmeta"><span>TÓPICO ${n?P.i+1:0} DE ${n}</span>${prox?`<button data-a="lista">Próximo: ${esc(prox.titulo)} ⌄</button>`:(n?`<button data-a="lista">Último tópico ⌄</button>`:"")}</div>
   <div class="pcont"><div class="pc">`;
   if(!t)h+=`<div class="vz">Esta mensagem ainda não tem tópicos.</div>`;
@@ -1523,7 +1533,7 @@ function atualizar(){
   $("preach").className="show ph-"+f+(f==="over"?" over":"");
   $("hora").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
   $("time").textContent=f==="over"?"+"+fmt(-rest):(db.cfg.modo==="regressivo"?fmt(rest):fmt(el));
-  $("prog").style.width=Math.min(100,el/P.total*100)+"%";
+  const tm=$("tmark");if(tm)tm.style.left=Math.min(100,el/P.total*100)+"%";
   $("go").textContent=P.t0?"❚❚":"▶";
 }
 function irTopico(d){const s=sermao(P.id),j=P.i+d;if(j<0||j>=s.topicos.length)return;P.i=j;P.sheet=false;desenharPregar();}
