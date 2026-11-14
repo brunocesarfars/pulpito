@@ -561,6 +561,26 @@ button.iactx{width:100%;text-align:left}
 .iap b{font-size:14.5px;font-weight:600;color:var(--text)}
 .iap small{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .iap.on{border-color:var(--gold);background:var(--gold-soft)}
+.igrid{display:block}
+@media(min-width:700px){
+  .igrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
+  .igrid>*{margin:0!important;min-width:0}
+  .igrid>.hero{grid-column:1/-1;order:1;padding:28px 30px}
+  .igrid>.hero h2{font-size:38px}
+  .igrid>.ig-comp{order:2}
+  .igrid>.stats{order:3;grid-template-columns:repeat(2,1fr);align-content:start;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:20px;gap:10px}
+  .igrid>.stats::before{content:"Resumo do app";grid-column:1/-1;font-size:11.5px;letter-spacing:.1em;color:var(--gold);font-weight:700;text-transform:uppercase;text-align:left}
+  .igrid>.stats div{background:var(--bg);padding:14px 6px}
+  .igrid>.stats b{font-size:28px}
+  .igrid>.alerta{grid-column:1/-1;order:4}
+  .igrid>.ig-cont{grid-column:1/-1;order:5}
+  .igrid>.ig-cont .hs{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible;gap:12px;padding:2px 0}
+  .igrid>.ig-cont .mini{width:auto}
+  .igrid>.acts{grid-column:1/-1;order:6}
+  .igrid>.ig-idea{order:7}
+  .igrid>.vd{order:8}
+  .igrid>.ig-rec{grid-column:1/-1;order:9}
+}
 </style>
 </head>
 <body>
@@ -1252,7 +1272,7 @@ function renderInicio(){
   const dias=e=>{const n=Math.round((new Date(e.data+"T12:00")-new Date(hoje()+"T12:00"))/864e5);return n<=0?"Hoje":n===1?"Amanhã":"em "+n+" dias";};
   const hists=[];db.sermoes.forEach(x=>(x.hist||[]).forEach(y=>hists.push({s:x,h:y})));hists.sort((a,b)=>(b.h.data||"").localeCompare(a.h.data||""));
   const nPreg=hists.length,nPront=db.sermoes.filter(x=>x.status==="pronto").length;
-  let h=`<div class="top"><h1>Púlpito<span>.</span></h1><button class="av" data-a="nome" aria-label="Seu nome">${esc((nm[0]||"P").toUpperCase())}</button></div><p class="sd">${sd}${nm?", "+esc(nm):""} · ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</p>`;
+  let h=`<div class="top"><h1>Púlpito<span>.</span></h1><button class="av" data-a="nome" aria-label="Seu nome">${esc((nm[0]||"P").toUpperCase())}</button></div><p class="sd">${sd}${nm?", "+esc(nm):""} · ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</p><div class="igrid">`;
   if(alvo)h+=`<div class="hero"><small>Próxima pregação</small><h2>${esc(alvo.titulo||"Sem título")}</h2>
     <div class="chips">${evMsg?`<span class="chip">${ico("cal",13)} ${dias(evMsg)}</span>`:""}<span class="chip">${stNome(alvo.status)}</span><span class="chip">${alvo.min} min</span><span class="chip">${alvo.topicos.length} tópicos</span></div>
     ${evMsg?`<div class="meta">${metaEv(evMsg)}</div>`:""}
@@ -1261,13 +1281,13 @@ function renderInicio(){
   h+=`<div class="stats"><div><b>${db.sermoes.length}</b><span>Mensagens</span></div><div><b>${nPront}</b><span>Prontas</span></div><div><b>${nPreg}</b><span>Pregações</span></div><div><b>${db.sermoes.filter(x=>x.fav).length}</b><span>Favoritas</span></div></div>`;
   if(db.sermoes.length&&(!db.cfg.ultBackup||Date.now()-db.cfg.ultBackup>6048e5))h+=`<div class="card alerta"><h3>Proteja seus sermões</h3><p class="meta">${db.cfg.ultBackup?"Faz mais de 7 dias da última cópia.":"Você ainda não fez cópia de segurança."} Entrar com sua conta Google em Mais também mantém tudo salvo na nuvem.</p><button class="btn gold" style="width:100%;margin-top:10px" data-a="baixar">⤓ Baixar cópia agora</button></div>`;
   h+=`<div class="acts"><button data-a="novo"><span class="ic">${ico("plus",20)}</span>Nova</button><button data-a="import"><span class="ic">${ico("file",20)}</span>Importar</button><button data-a="tab" data-v="biblia"><span class="ic">${ico("book",20)}</span>Bíblia</button><button data-a="favs"><span class="ic">${ico("star",20)}</span>Favoritas</button></div>`;
-  if(emAnd.length)h+=`<div class="sech"><h3>Continue de onde parou</h3><button data-a="tab" data-v="msgs">Ver todas</button></div><div class="hs">${emAnd.map(x=>`<button class="mini" data-a="abrir" data-v="${x.id}"><span class="chip st-${x.status}">${stNome(x.status)}</span><b>${esc(x.titulo||"Sem título")}</b><small>${x.topicos.length} tópicos · ${x.min} min</small></button>`).join("")}</div>`;
-  h+=`<div class="card" style="margin-top:14px"><h3>${ico("bulb",14)} Ideia rápida</h3><div class="idea"><input id="idq" placeholder="Anote uma ideia de pregação…" maxlength="120"><button data-a="ideia">Guardar</button></div></div>`;
+  if(emAnd.length)h+=`<div class="ig-cont"><div class="sech"><h3>Continue de onde parou</h3><button data-a="tab" data-v="msgs">Ver todas</button></div><div class="hs">${emAnd.map(x=>`<button class="mini" data-a="abrir" data-v="${x.id}"><span class="chip st-${x.status}">${stNome(x.status)}</span><b>${esc(x.titulo||"Sem título")}</b><small>${x.topicos.length} tópicos · ${x.min} min</small></button>`).join("")}</div></div>`;
+  h+=`<div class="card ig-idea" style="margin-top:14px"><h3>${ico("bulb",14)} Ideia rápida</h3><div class="idea"><input id="idq" placeholder="Anote uma ideia de pregação…" maxlength="120"><button data-a="ideia">Guardar</button></div></div>`;
   const vd=versoDoDia(),vr=parseRef(vd.ref);
   h+=`<div class="card vd"><h3>Versículo do dia</h3><p>“${esc(vd.t)}”</p><b>${esc(vd.ref)}</b>${vr?`<div><button class="btn" style="margin-top:12px" data-a="vdia" data-l="${vr.l}" data-c="${vr.c}" data-vs="${vr.todo?0:vr.v1}">Ler o capítulo</button></div>`:""}</div>`;
-  h+=`<div class="sech"><h3>Próximos compromissos</h3><button data-a="tab" data-v="agenda">Agenda</button></div><div class="card">${ev.slice(0,3).map(e=>`<div class="li"><div class="d"><b>${e.data.slice(8)}</b>${MESES[+e.data.slice(5,7)-1].slice(0,3)}</div><div><b>${esc(e.titulo)}</b><span class="badge">${dias(e)}</span><div class="meta">${e.hora||"Sem hora"}${e.local?" · "+esc(e.local):""}</div></div></div>`).join("")||`<p class="meta">Nenhum compromisso agendado.</p>`}</div>`;
-  if(hists.length)h+=`<div class="sech"><h3>Pregações recentes</h3></div><div class="card">${hists.slice(0,3).map(x=>`<div class="li"><div><b>${esc(x.s.titulo||"Sem título")}</b><div class="meta">${dataBR(x.h.data)}${x.h.local?" · "+esc(x.h.local):""}${x.h.min?" · "+x.h.min+" min":""}</div></div></div>`).join("")}</div>`;
-  $("app").innerHTML=h+nav();
+  h+=`<div class="ig-comp"><div class="sech"><h3>Próximos compromissos</h3><button data-a="tab" data-v="agenda">Agenda</button></div><div class="card">${ev.slice(0,3).map(e=>`<div class="li"><div class="d"><b>${e.data.slice(8)}</b>${MESES[+e.data.slice(5,7)-1].slice(0,3)}</div><div><b>${esc(e.titulo)}</b><span class="badge">${dias(e)}</span><div class="meta">${e.hora||"Sem hora"}${e.local?" · "+esc(e.local):""}</div></div></div>`).join("")||`<p class="meta">Nenhum compromisso agendado.</p>`}</div></div>`;
+  if(hists.length)h+=`<div class="ig-rec"><div class="sech"><h3>Pregações recentes</h3></div><div class="card">${hists.slice(0,3).map(x=>`<div class="li"><div><b>${esc(x.s.titulo||"Sem título")}</b><div class="meta">${dataBR(x.h.data)}${x.h.local?" · "+esc(x.h.local):""}${x.h.min?" · "+x.h.min+" min":""}</div></div></div>`).join("")}</div></div>`;
+  $("app").innerHTML=h+"</div>"+nav();
 }
 function agrupar(lista){
   if(V.grupo==="todos")return[{h:"",it:lista}];
@@ -2663,7 +2683,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="33";
+const VER="34";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
