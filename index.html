@@ -388,6 +388,13 @@ mark.g1{background:rgba(245,211,74,.4)}mark.g2{background:rgba(94,200,130,.36)}m
 .tools button.tx{width:auto;padding:0 10px;font-size:12px;white-space:nowrap}
 .pc .bl.rec{margin-left:16px;padding-left:12px;border-left:2px solid var(--gold-line,rgba(212,175,55,.45))}
 .pc h1,.pc h2{text-align:left;hyphens:manual}
+.pkcaps{display:flex;flex-wrap:wrap;gap:6px;max-height:112px;overflow-y:auto;padding:2px}
+.pkcaps button{min-width:42px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:14px}
+.pkcaps button.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold);font-weight:700}
+.pkvs{margin-top:8px;max-height:30vh;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
+.pkv{display:flex;gap:10px;width:100%;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px;line-height:1.35;align-items:flex-start}
+.pkv:last-child{border-bottom:0}.pkv b{flex:none;width:26px;color:var(--muted)}.pkv span{flex:1;min-width:0}
+.pkv.on{background:var(--gold-soft)}.pkv.on b{color:var(--gold)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -1209,7 +1216,7 @@ function abrirNome(){
 const cur=()=>sermao(V.id);
 function blocoEd(b,i,n){
   const [ic,lab]=TIPOS[b.tipo];let c="";
-  if(b.tipo==="biblico")c=`<input class="in" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><textarea class="in" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea><button class="btn" data-a="bfill" data-v="${b.id}">📖 Buscar texto na Bíblia</button>`;
+  if(b.tipo==="biblico")c=`<input class="in" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><textarea class="in" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea><div class="row" style="gap:8px"><button class="btn gold" style="flex:1" data-a="pick" data-k="bloco" data-v="${b.id}">📚 Escolher passagem</button><button class="btn" style="flex:1" data-a="bfill" data-v="${b.id}">📖 Buscar pela referência</button></div>`;
   else if(b.tipo==="texto")c=`<div class="fmt"><button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button><button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button></div><div class="rt" contenteditable="true" role="textbox" aria-label="Texto" data-b="html">${limpa(b.t)}</div>`;
   else if(b.tipo==="lista")c=`<textarea class="in" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<textarea class="in" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
@@ -1234,7 +1241,7 @@ function renderEdit(y){
   <button class="add" style="height:46px;margin-bottom:6px" data-a="det">${V.det?"▴ Ocultar detalhes":"⚙ Detalhes da mensagem"}</button>`;
   if(V.det)h+=`<div class="card" style="margin-top:8px">
   <label class="f" for="f-base" style="margin-top:0">Texto base</label>
-  <input class="in" id="f-base" placeholder="Ex.: Marcos 4:35-41" value="${esc(s.base)}"><div class="hint" id="hint-base">${esc(livroDe(s.base)||"")}</div>
+  <input class="in" id="f-base" placeholder="Ex.: Marcos 4:35-41" value="${esc(s.base)}"><div class="hint" id="hint-base">${esc(livroDe(s.base)||"")}</div><button class="btn" style="margin-top:6px" data-a="pick" data-k="base" data-v="${s.id}">📚 Escolher texto base na Bíblia</button>
   <label class="f" for="f-assunto">Assunto</label>
   <input class="in" id="f-assunto" list="dl-a" placeholder="Ex.: Confiança em Deus nas crises" value="${esc(s.assunto)}">
   <datalist id="dl-a">${assuntos.map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
@@ -1256,7 +1263,7 @@ function renderEdit(y){
     const ab=V.ab.has(t.id),pw=palT(t);
     h+=`<div class="tp ${ab?"open":""}" data-t="${t.id}"><div class="tph" data-a="tog" data-v="${t.id}"><span class="num">${i+1}</span><span class="tt ${t.titulo?"":"vazio"}">${esc(t.titulo||"Tópico sem título")}${pw?`<small class="tmin">~${minEst(pw)} min</small>`:""}</span>${t.ref?`<span class="rf">${esc(t.ref)}</span>`:""}<span class="cv">⌄</span></div>
     <div class="tpb"><input class="in" data-f="titulo" placeholder="Título do tópico" value="${esc(t.titulo)}" aria-label="Título do tópico ${i+1}">
-      <input class="in" data-f="ref" style="margin-top:8px" placeholder="Versículo (ex.: Marcos 4:37)" value="${esc(t.ref)}" aria-label="Versículo do tópico ${i+1}"><div class="hint" data-hint>${esc(livroDe(t.ref)||"")}</div>
+      <input class="in" data-f="ref" style="margin-top:8px" placeholder="Versículo (ex.: Marcos 4:37)" value="${esc(t.ref)}" aria-label="Versículo do tópico ${i+1}"><div class="hint" data-hint>${esc(livroDe(t.ref)||"")}</div><button class="btn" style="margin-top:6px" data-a="pick" data-k="topico" data-v="${t.id}">📚 Escolher versículo na Bíblia</button>
       ${t.blocos.map((b,j)=>blocoEd(b,j,t.blocos.length)).join("")}
       <label class="f" style="margin-top:8px">Adicionar ao tópico</label>
       <div class="ferr">${Object.entries(TIPOS).map(([k,[ic,lb]])=>`<button data-a="addb" data-v="${k}"><i>${ic}</i>${lb}</button>`).join("")}</div>
@@ -1273,6 +1280,56 @@ function renderEdit(y){
   $("app").innerHTML=h;
   if(y!==undefined)scrollTo(0,y);
 }
+/* ---------- Seletor de passagem: versão, livro, capítulo e versículos ---------- */
+let PK=null;
+function abrirPick(k,id){
+  const s=cur();if(!s)return;
+  let ref="";
+  if(k==="bloco"){for(const t of s.topicos){const b=t.blocos.find(x=>x.id===id);if(b){ref=b.ref;break;}}}
+  else if(k==="topico"){const t=s.topicos.find(x=>x.id===id);ref=t?t.ref:"";}
+  else ref=s.base;
+  PK={k,id,l:0,c:1,sel:new Set()};
+  const r=parseRef(ref);
+  if(r){PK.l=r.l;PK.c=r.c;if(!r.todo)for(let i=r.v1;i<=r.v2;i++)PK.sel.add(i);}
+  SHEET=null;desenhaPick();
+}
+function desenhaPick(soVersos){
+  const B=bib(),ver=db.cfg.versao||"acf",vl=versList();
+  const caps=(B[PK.l]||[]).length,vs=(B[PK.l]||[])[PK.c-1]||[];
+  if(PK.c>caps)PK.c=1;
+  const lista=vs.map((t,i)=>`<button class="pkv ${PK.sel.has(i+1)?"on":""}" data-a="pkv" data-v="${i+1}"><b>${i+1}</b><span>${esc(t)}</span></button>`).join("");
+  const rodape=`<div class="bar" style="margin-top:10px"><button class="btn gold" data-a="pkok" ${PK.sel.size?"":"disabled style='opacity:.45'"}>Inserir${PK.sel.size?" ("+PK.sel.size+(PK.sel.size===1?" verso":" versos")+")":""}</button><button class="btn" data-a="fechar">Cancelar</button></div>`;
+  if(soVersos&&$("pk-vs")){$("pk-vs").innerHTML=lista;$("pk-rod").innerHTML=rodape;return;}
+  $("mb").innerHTML=`<h3>Escolher passagem</h3>
+  <div class="row" style="gap:8px"><div style="flex:1"><label class="f" for="pk-v" style="margin-top:0">Versão</label><select class="in" id="pk-v">${Object.keys(vl).map(x=>`<option value="${x}" ${x===ver?"selected":""}>${esc(vl[x].n)}</option>`).join("")}</select></div>
+  <div style="flex:2"><label class="f" for="pk-l" style="margin-top:0">Livro</label><select class="in" id="pk-l"><optgroup label="Antigo Testamento">${LIVROS.slice(0,39).map((n,i)=>`<option value="${i}" ${i===PK.l?"selected":""}>${esc(n)}</option>`).join("")}</optgroup><optgroup label="Novo Testamento">${LIVROS.slice(39).map((n,i)=>`<option value="${i+39}" ${i+39===PK.l?"selected":""}>${esc(n)}</option>`).join("")}</optgroup></select></div></div>
+  <label class="f">Capítulo</label>
+  <div class="pkcaps">${Array.from({length:caps},(_,i)=>`<button class="${i+1===PK.c?"on":""}" data-a="pkcap" data-v="${i+1}">${i+1}</button>`).join("")}</div>
+  <div class="row" style="align-items:center;justify-content:space-between;margin-top:12px"><label class="f" style="margin:0">Versículos</label><span><button class="btn" style="height:32px;padding:0 12px;font-size:13px" data-a="pktodos">Todos</button> <button class="btn" style="height:32px;padding:0 12px;font-size:13px" data-a="pklimpa">Limpar</button></span></div>
+  <div class="pkvs" id="pk-vs">${lista}</div><div id="pk-rod">${rodape}</div>`;
+  $("modal").classList.add("show");
+}
+function confirmaPick(){
+  const s=cur();if(!s||!PK||!PK.sel.size)return;
+  const nome=LIVROS[PK.l],ns=[...PK.sel].sort((a,b)=>a-b),faixas=[];
+  ns.forEach(n=>{const u=faixas[faixas.length-1];if(u&&u[1]===n-1)u[1]=n;else faixas.push([n,n]);});
+  const rf=f=>`${nome} ${PK.c}:${f[0]}${f[1]>f[0]?"-"+f[1]:""}`;
+  const refs=faixas.map(rf),label=refs.length===1?refs[0]:`${nome} ${PK.c}:`+faixas.map(f=>f[0]+(f[1]>f[0]?"-"+f[1]:"")).join(",");
+  if(PK.k==="bloco"){
+    for(const t of s.topicos){const j=t.blocos.findIndex(x=>x.id===PK.id);if(j<0)continue;
+      const b=t.blocos[j];b.ref=refs[0];b.t=textoRef(refs[0]);
+      refs.slice(1).forEach((r,q)=>t.blocos.splice(j+1+q,0,{id:uid(),tipo:"biblico",ref:r,t:textoRef(r),aut:""}));
+      break;}
+  }else if(PK.k==="topico"){const t=s.topicos.find(x=>x.id===PK.id);if(t)t.ref=label;}
+  else s.base=label;
+  s.at=Date.now();salvar();fechar();rerender();
+  toast(PK.k==="bloco"?"Passagem inserida":"Versículo definido: "+label,2000);
+}
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="pk-v"){const v=t.value;trocaVersao(v).then(()=>{SHEET=null;desenhaPick();});}
+  else if(t.id==="pk-l"&&PK){PK.l=+t.value;PK.c=1;PK.sel=new Set();desenhaPick();}
+});
 const rerender=()=>renderEdit(scrollY);
 function achaT(el){const b=el.closest("[data-t]");return b&&cur().topicos.find(t=>t.id===b.dataset.t);}
 function mover(arr,id,d){const i=arr.findIndex(t=>t.id===id),j=i+d;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];cur().at=Date.now();salvar();rerender();}
@@ -1949,7 +2006,13 @@ document.addEventListener("click",e=>{
   else if(a==="status"){const s=cur();s.status=v;s.at=Date.now();salvar();rerender();}
   else if(a==="tog"){V.ab.has(v)?V.ab.delete(v):V.ab.add(v);rerender();}
   else if(a==="addt"){const s=cur(),t={id:uid(),titulo:"",ref:"",blocos:[]};s.topicos.push(t);V.ab.add(t.id);salvar();rerender();}
-  else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();}
+  else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();if(v==="biblico")abrirPick("bloco",bl.id);}
+  else if(a==="pick")abrirPick(b.dataset.k,v);
+  else if(a==="pkcap"){PK.c=+v;PK.sel=new Set();desenhaPick();}
+  else if(a==="pkv"){const n=+v;if(PK.sel.has(n))PK.sel.delete(n);else PK.sel.add(n);desenhaPick(true);}
+  else if(a==="pktodos"){const n=((bib()[PK.l]||[])[PK.c-1]||[]).length;PK.sel=new Set(Array.from({length:n},(_,i)=>i+1));desenhaPick(true);}
+  else if(a==="pklimpa"){PK.sel=new Set();desenhaPick(true);}
+  else if(a==="pkok")confirmaPick();
   else if(a==="bsobe"||a==="bdesce"){const t=achaT(b);mover(t.blocos,v,a==="bsobe"?-1:1);}
   else if(a==="bnovot"){
     const s0=cur(),t=achaT(b),j=t.blocos.findIndex(x=>x.id===v);if(j<0)return;
