@@ -385,6 +385,8 @@ mark.g1{background:rgba(245,211,74,.4)}mark.g2{background:rgba(94,200,130,.36)}m
 #preach.show.roll{grid-template-columns:minmax(0,1fr);grid-template-areas:"bar" "prog" "cont" "sheet"}
 .pc .bl,.rt{text-align:justify;text-justify:inter-word;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
 .pc .bl li{text-align:left}
+.tools button.tx{width:auto;padding:0 10px;font-size:12px;white-space:nowrap}
+.pc .bl.rec{margin-left:16px;padding-left:12px;border-left:2px solid var(--gold-line,rgba(212,175,55,.45))}
 .pc h1,.pc h2{text-align:left;hyphens:manual}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -955,13 +957,15 @@ function limpa(h){
   return d.body.innerHTML;
 }
 function plain(h){const d=document.createElement("div");d.innerHTML=limpa(h).replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p)>/gi,"\n");return d.textContent.trim();}
-const paraHtml=t=>esc(t).replace(/\n/g,"<br>");
+const paraHtml=t=>esc(t).replace(/\n/g,"<br>").replace(/\uE000/g,"<b>").replace(/\uE001/g,"</b>").replace(/\uE002/g,"<i>").replace(/\uE003/g,"</i>").replace(/\uE004/g,"");
+const semMarca=t=>String(t).replace(/[\uE000-\uE004]/g,"");
 function blocosDeNotas(n){
   const out=[];
   (n||"").split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean).forEach(p=>{
+    const rec=p.charAt(0)==="\uE004";if(rec)p=p.slice(1);
     const ls=p.split("\n");
-    if(ls.every(l=>/^•/.test(l)))out.push({id:uid(),tipo:"lista",t:ls.map(l=>l.replace(/^•\s*/,"")).join("\n")});
-    else out.push({id:uid(),tipo:"texto",t:paraHtml(p)});
+    if(ls.every(l=>/^[\uE000-\uE003]*•/.test(l)))out.push({id:uid(),tipo:"lista",t:ls.map(l=>semMarca(l).replace(/^•\s*/,"")).join("\n")});
+    else{const bk={id:uid(),tipo:"texto",t:paraHtml(p)};if(rec)bk.rec=1;out.push(bk);}
   });
   return out;
 }
@@ -1210,7 +1214,7 @@ function blocoEd(b,i,n){
   else if(b.tipo==="lista")c=`<textarea class="in" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<textarea class="in" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
   else c=`<textarea class="in" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
-  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
+  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}" aria-label="Começar um novo tópico a partir deste bloco">⤓ Novo tópico</button><button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
 }
 const WPM=130;
 function palT(t){let n=0;t.blocos.forEach(b=>{if(b.tipo==="obs")return;const x=b.tipo==="texto"?plain(b.t):(b.t||"");const w=x.split(/\s+/).filter(Boolean).length;n+=b.tipo==="biblico"?Math.round(w*.8):w;});return n;}
@@ -1256,7 +1260,7 @@ function renderEdit(y){
       ${t.blocos.map((b,j)=>blocoEd(b,j,t.blocos.length)).join("")}
       <label class="f" style="margin-top:8px">Adicionar ao tópico</label>
       <div class="ferr">${Object.entries(TIPOS).map(([k,[ic,lb]])=>`<button data-a="addb" data-v="${k}"><i>${ic}</i>${lb}</button>`).join("")}</div>
-      <div class="tools"><button data-a="sobe" data-v="${t.id}" aria-label="Mover tópico para cima">▲</button><button data-a="desce" data-v="${t.id}" aria-label="Mover tópico para baixo">▼</button><button data-a="delt" data-v="${t.id}" aria-label="Excluir tópico">✕ Excluir tópico</button></div></div></div>`;
+      <div class="tools"><button data-a="sobe" data-v="${t.id}" aria-label="Mover tópico para cima">▲</button><button data-a="desce" data-v="${t.id}" aria-label="Mover tópico para baixo">▼</button>${i>0?`<button class="tx" data-a="tjunta" data-v="${t.id}" aria-label="Juntar ao tópico anterior">⤒ Juntar ao anterior</button>`:""}<button data-a="delt" data-v="${t.id}" aria-label="Excluir tópico">✕ Excluir tópico</button></div></div></div>`;
   });
   h+=`<div class="gh" style="margin-top:26px">Quando preguei · ${s.hist.length}</div>`;
   s.hist.slice().sort((a,b)=>b.data.localeCompare(a.data)).forEach(x=>{
@@ -1355,27 +1359,41 @@ async function lerPDF(buf){
   for(let p=1;p<=doc.numPages;p++){
     const pg=await doc.getPage(p),c=await pg.getTextContent(),rows=[];
     try{await pg.getOperatorList();}catch(e){}
-    const negr=n=>{try{const f=pg.commonObjs.get(n);return !!(f&&(f.bold||/bold|black|heavy|semibold/i.test(f.name||"")));}catch(e){return false;}};
+    const fnt=n=>{try{const f=pg.commonObjs.get(n);return f||{};}catch(e){return {};}};
     c.items.forEach(i=>{
       if(!i.str)return;
-      const y=i.transform[5],x=i.transform[4],sz=Math.abs(i.transform[3])||i.height||10,fam=((c.styles&&c.styles[i.fontName])||{}).fontFamily||"";
+      const y=i.transform[5],x=i.transform[4],sz=Math.abs(i.transform[3])||i.height||10,fam=((c.styles&&c.styles[i.fontName])||{}).fontFamily||"",f=fnt(i.fontName),nm=(f.name||"")+" "+fam+" "+i.fontName;
       let r=rows.find(r=>Math.abs(r.y-y)<=Math.max(2,sz*.3));
       if(!r){r={y,its:[]};rows.push(r);}
-      r.its.push({x,w:i.width||0,s:i.str,sz,b:/bold|black|heavy/i.test(fam+" "+i.fontName)||negr(i.fontName)});
+      r.its.push({x,w:i.width||0,s:i.str,sz,b:!!(f.bold||/bold|black|heavy|semibold/i.test(nm)),i:!!(f.italic||/italic|oblique/i.test(nm))});
     });
     rows.sort((a,b)=>b.y-a.y).forEach(r=>{
       r.its.sort((a,b)=>a.x-b.x);
-      let t="";r.its.forEach((it,k)=>{if(k){const pv=r.its[k-1];if(it.x-(pv.x+pv.w)>it.sz*.15&&!/\s$/.test(t)&&!/^\s/.test(it.s))t+=" ";}t+=it.s;});
-      t=t.replace(/\s+/g," ").trim();if(!t)return;
-      const vw=pg.view||[0,0,1,842];linhas.push({t,sz:Math.max(...r.its.map(i=>i.sz)),b:r.its.every(i=>i.b||!i.s.trim()),y:r.y,pg:p,yr:(r.y-vw[1])/((vw[3]-vw[1])||842)});
+      const segs=[];let t="";
+      r.its.forEach((it,k)=>{
+        if(k){const pv=r.its[k-1];if(it.x-(pv.x+pv.w)>it.sz*.15&&!/\s$/.test(t)&&!/^\s/.test(it.s)){segs.push({s:" ",b:false,i:false});t+=" ";}}
+        segs.push({s:it.s,b:it.b,i:it.i});t+=it.s;
+      });
+      let m="",ob=false,oi=false;
+      segs.forEach(sg=>{
+        const w=!sg.s.trim(),nb=w?ob:sg.b,ni=w?oi:sg.i;
+        if((ob&&!nb)||(oi&&!ni)){if(oi){m+="";oi=false;}if(ob){m+="";ob=false;}}
+        if(!ob&&nb){m+="";ob=true;}if(!oi&&ni){m+="";oi=true;}
+        m+=sg.s;
+      });
+      if(oi)m+="";if(ob)m+="";
+      t=t.replace(/\s+/g," ").trim();m=m.replace(/\s+/g," ").trim();if(!t)return;
+      const vw=pg.view||[0,0,1,842];
+      linhas.push({t,m,sz:Math.max(...r.its.map(i=>i.sz)),b:r.its.every(i=>i.b||!i.s.trim()),y:r.y,pg:p,yr:(r.y-vw[1])/((vw[3]-vw[1])||842),x:r.its[0].x,xr:Math.max(...r.its.map(i=>i.x+i.w))});
     });
   }
   if(linhas.reduce((a,l)=>a+l.t.length,0)<20)throw new Error("sem-texto");
-  /* tira número de página e cabeçalho/rodapé repetido */
+  /* tira número de página, cabeçalho/rodapé repetido e traços decorativos */
   const chave=t=>t.toLowerCase().replace(/\d+/g,"#");
   const reps={};linhas.forEach(l=>{if(l.yr>.9||l.yr<.1){const k=chave(l.t)+"|"+l.pg;if(!reps[k]){reps[k]=1;reps[chave(l.t)]=(reps[chave(l.t)]||0)+1;}}});
   const npg=doc.numPages;
   const util=linhas.filter(l=>{
+    if(/^[—–\-_=·.\s]{5,}$/.test(l.t))return false;
     if(/^\s*(p[áa]g(ina)?\.?\s*)?\d{1,4}(\s*(de|\/)\s*\d{1,4})?\s*$/i.test(l.t)&&(l.yr>.85||l.yr<.15))return false;
     if((l.yr>.9||l.yr<.1)&&npg>=3&&(reps[chave(l.t)]||0)>=Math.min(3,npg))return false;
     return true;
@@ -1383,6 +1401,12 @@ async function lerPDF(buf){
   if(util.reduce((a,l)=>a+l.t.length,0)>=20){linhas.length=0;util.forEach(l=>linhas.push(l));}
   const ord=linhas.slice().sort((a,b)=>a.sz-b.sz),tot=ord.reduce((a,l)=>a+l.t.length,0);
   let acc=0,med=ord[0].sz;for(const l of ord){acc+=l.t.length;if(acc>=tot/2){med=l.sz;break;}}
+  /* margem esquerda do corpo e largura útil */
+  const corpo=linhas.filter(l=>Math.abs(l.sz-med)<=med*.15);
+  const cont={};corpo.forEach(l=>{const k=Math.round(l.x);cont[k]=(cont[k]||0)+l.t.length;});
+  let mx=0,mc=-1;Object.keys(cont).forEach(k=>{if(cont[k]>mc){mc=cont[k];mx=+k;}});
+  const xs=corpo.map(l=>l.xr).sort((a,b)=>a-b),maxR=xs.length?xs[Math.floor(xs.length*.9)]:0;
+  linhas.forEach(l=>{l.rec=l.x>mx+med*1.1;});
   /* espaçamento normal entre linhas do mesmo parágrafo */
   const gaps=[];linhas.forEach((l,i)=>{const a=linhas[i-1];if(a&&a.pg===l.pg){const g=a.y-l.y;if(g>l.sz*.6&&g<l.sz*2.2)gaps.push(g);}});
   gaps.sort((a,b)=>a-b);const lead=gaps.length?gaps[Math.floor(gaps.length/2)]:med*1.3;
@@ -1398,26 +1422,31 @@ async function lerPDF(buf){
     const caps=letras.length>=4&&l.t===l.t.toUpperCase();
     const numer=RX_TIT.test(l.t)&&!/^\d{1,3}\s*[\.\)]?\s*$/.test(l.t);
     const solta=ga>lead*1.3&&gb>lead*1.3;
-    const cont=/^[a-zà-ú,;)\]]/.test(l.t)||/[,;]$/.test(l.t)||/^\(?[A-Z]{2,6}\)?$/.test(l.t.trim())||letras.length<3;
+    const cont2=/^[a-zà-ú,;)\]]/.test(l.t)||/[,;]$/.test(l.t)||/^\(?[A-Z]{2,6}\)?$/.test(l.t.trim())||letras.length<3;
     let tit=false;
-    if(l.t.length<120&&!cont){
+    if(l.t.length<120&&!cont2&&!l.rec){
       if(numer&&l.t.length<100&&(estilo||ga>lead*1.3||gb>lead*1.3||(l.t.length<70&&!/[.!?]$/.test(l.t))))tit=true;
       else if(l.sz>=med*1.12&&(ga>lead*1.3||gb>lead*1.3||l.b))tit=true;
       else if(l.b&&l.t.length<90&&solta)tit=true;
       else if(caps&&l.t.length<90&&solta)tit=true;
     }
-    if(contH)ult.t+=" "+l.t;
+    if(contH){ult.t+=" "+l.t;}
     else if(tit)bl.push({k:"h",t:l.t});
     else{
-      const sobe=ga>Math.max(lead*1.45,l.sz*1.5)||(ant&&ant.pg!==l.pg);
-      const sobreviveFrase=/^[a-zà-ú]/.test(l.t)&&ult&&ult.k==="p"&&!FIM.test(ult.t);
-      const novo=!ult||ult.k==="h"||!ant||(sobe&&!sobreviveFrase&&(ant.pg===l.pg||FIM.test(ult.t)));
-      if(novo)bl.push({k:"p",t:l.t});
-      else if(/[a-zà-ú]-$/.test(ult.t)&&/^[a-zà-ú]/.test(l.t))ult.t=ult.t.slice(0,-1)+l.t;
-      else ult.t+=" "+l.t;
+      const marc=/^[•·▪◦]\s|^[-–]\s+\S/.test(l.t);
+      const abre=marc?"• ":"";const tt=marc?l.t.replace(/^[•·▪◦\-–]\s*/,""):l.t,mm=marc?l.m.replace(/^([-]*)[•·▪◦\-–]\s*/,"$1"):l.m;
+      const mudaRec=ant&&ant.pg===l.pg&&l.rec!==ant.rec;
+      const sobe=ga>lead*1.1||(ant&&ant.pg!==l.pg);
+      const curta=ant&&ant.pg===l.pg&&maxR&&ant.xr<maxR*.72&&FIM.test(ult&&ult.k==="p"?ult.t:"")&&/^[A-ZÀ-Ú“"(\[]/.test(l.t);
+      const sobreviveFrase=/^[a-zà-ú]/.test(l.t)&&ult&&ult.k==="p"&&!FIM.test(ult.t)&&!mudaRec;
+      const novo=!ult||ult.k==="h"||!ant||marc||mudaRec||curta||(sobe&&!sobreviveFrase&&(ant.pg===l.pg||FIM.test(ult.t)));
+      if(novo)bl.push({k:"p",t:abre+tt,m:abre+mm,rec:l.rec});
+      else if(/[a-zà-ú]-$/.test(ult.t)&&/^[a-zà-ú]/.test(l.t)){ult.t=ult.t.slice(0,-1)+l.t;ult.m=ult.m.replace(/-([]*)$/,"$1")+l.m;}
+      else{ult.t+=" "+l.t;ult.m+=" "+l.m;}
     }
     ant=l;
   });
+  bl.forEach(b=>{if(b.k==="p"&&b.m){b.m=b.m.replace(/ /g," ").replace(/ /g," ").replace(/ /g," ");b.m=(b.rec?"":"")+b.m;}});
   return bl;
 }
 function limparRef(titulo,ref){
@@ -1448,15 +1477,18 @@ function quebraPass(p){
   return out;
 }
 function ligaBiblia(ps){
-  const out=[];let buf=[];
-  const junta=a=>{let t="";a.forEach((p,k)=>{t+=(k?(/^•/.test(p)&&/^•/.test(a[k-1])?"\n":"\n\n"):"")+p;});return t;};
+  const out=[];let buf=[],pulaRec=false;
+  const junta=a=>{let t="";a.forEach((p,k)=>{t+=(k?"\n\n":"")+p;});return t;};
   const flush=()=>{if(buf.length)blocosDeNotas(junta(buf)).forEach(x=>out.push(x));buf=[];};
+  const SOV=new RegExp("^((?:[1-3]\\s*)?(?:[A-Za-zÀ-ú]+\\s+){0,2}[A-Za-zÀ-ú]+\\s+\\d{1,3}\\s*[:.]\\s*\\d{1,3}(?:\\s*[–\\-,]\\s*\\d{1,3})*)\\s*(?:[—–\\-:]?\\s*\\(?"+VERS_RX+"\\)?)?\\.?$");
   ps.forEach(p=>{
-    const so=RXSO.exec(p.trim());
-    if(so&&refOk(so[1])){flush();out.push({id:uid(),tipo:"biblico",ref:capRef(so[1]),t:""});return;}
-    const pc=quebraPass(p);
+    const rec=p.charAt(0)==="\uE004",pl=semMarca(p).trim(),pre=rec?"\uE004":"";
+    if(pulaRec){pulaRec=false;if(rec&&/^\d{1,3}\s/.test(pl))return;}
+    const so=SOV.exec(pl);
+    if(so&&refOk(so[1])){flush();out.push({id:uid(),tipo:"biblico",ref:capRef(so[1]),t:""});pulaRec=true;return;}
+    const pc=quebraPass(pl);
     if(!pc.some(x=>x.ref)){buf.push(p);return;}
-    pc.forEach(x=>{if(x.ref){flush();out.push({id:uid(),tipo:"biblico",ref:x.ref,t:""});}else buf.push(x.t);});
+    pc.forEach(x=>{if(x.ref){flush();out.push({id:uid(),tipo:"biblico",ref:x.ref,t:""});}else buf.push(pre+x.t);});
   });
   flush();return out;
 }
@@ -1483,7 +1515,7 @@ function estruturar(bl,arq){
     }else{
       if(!c&&!tops.length&&b.t.length<90&&refDe(b.t)===b.t.trim().replace(/^texto base:?\s*/i,"").replace(/\s*\(?\b(NAA|NVI|NVT|NTLH|ARA|ARC|ACF|KJV|AA)\b\)?\s*$/i,"")){continue;}
       if(!c){c={t:tops.length?"":"Introdução",p:[],auto:true};tops.push(c);}
-      c.p.push(b.t);
+      c.p.push(b.m||b.t);
     }
   }
   if(!tops.some(x=>x.t!=="Introdução")){
@@ -1501,7 +1533,7 @@ function criarImportado(bl,arq){
     bl.filter(b=>b.t&&b.t.trim()).forEach(b=>{
       if(!pulou&&norm(b.t)===norm(r.titulo)){pulou=true;return;}
       if(b.k==="h")blocos.push({id:uid(),tipo:"texto",t:"<b>"+esc(b.t)+"</b>"});
-      else ligaBiblia([b.t]).forEach(x=>blocos.push(x));
+      else ligaBiblia([b.m||b.t]).forEach(x=>blocos.push(x));
     });
     topicos=[{id:uid(),titulo:"Texto do sermão",ref:"",blocos}];modo="rolagem";
   }
@@ -1606,7 +1638,7 @@ function grifar(n){
 function blocoPreg(b){
   if(b.tipo==="biblico")return `<div class="bl bib"><div class="bt">📖 ${esc(b.ref)}</div>${(b.t||textoRef(b.ref))?`<div>${esc(b.t||textoRef(b.ref))}</div>`:""}</div>`;
   if(b.tipo==="lista")return `<div class="bl"><ul>${b.t.split("\n").filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
-  if(b.tipo==="texto")return `<div class="bl">${limpa(b.t)}</div>`;
+  if(b.tipo==="texto")return `<div class="bl${b.rec?" rec":""}">${limpa(b.t)}</div>`;
   if(b.tipo==="citacao")return `<div class="bl"><blockquote class="cit">“${esc(b.t)}”${b.aut?`<cite>— ${esc(b.aut)}</cite>`:""}</blockquote></div>`;
   return `<div class="bl obs">${esc(b.t)}</div>`;
 }
@@ -1919,6 +1951,22 @@ document.addEventListener("click",e=>{
   else if(a==="addt"){const s=cur(),t={id:uid(),titulo:"",ref:"",blocos:[]};s.topicos.push(t);V.ab.add(t.id);salvar();rerender();}
   else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();}
   else if(a==="bsobe"||a==="bdesce"){const t=achaT(b);mover(t.blocos,v,a==="bsobe"?-1:1);}
+  else if(a==="bnovot"){
+    const s0=cur(),t=achaT(b),j=t.blocos.findIndex(x=>x.id===v);if(j<0)return;
+    const rest=t.blocos.splice(j);let titulo="";
+    const f=rest[0],pt=f.tipo==="texto"?plain(f.t):"";
+    if(f.tipo==="texto"&&pt&&pt.length<=90&&!pt.includes("\n")){titulo=pt;rest.shift();}
+    const nt={id:uid(),titulo,ref:"",blocos:rest};
+    s0.topicos.splice(s0.topicos.indexOf(t)+1,0,nt);
+    s0.at=Date.now();V.ab.add(nt.id);salvar();rerender();toast("Novo tópico criado. Dê um título se precisar.",2400);
+  }
+  else if(a==="tjunta"){
+    const s0=cur(),i=s0.topicos.findIndex(x=>x.id===v);if(i<1)return;
+    const t=s0.topicos[i],ant=s0.topicos[i-1];
+    if(t.titulo)ant.blocos.push({id:uid(),tipo:"texto",t:"<b>"+esc(t.titulo)+"</b>"});
+    ant.blocos.push(...t.blocos);s0.topicos.splice(i,1);
+    s0.at=Date.now();V.ab.add(ant.id);salvar();rerender();toast("Tópicos juntados.",2000);
+  }
   else if(a==="bdel"){const t=achaT(b);t.blocos=t.blocos.filter(x=>x.id!==v);salvar();rerender();}
   else if(a==="fmt"){if(/^g\d$/.test(v))grifar(+v[1]);else document.execCommand(v);}
   else if(a==="modoP"){const s=cur();s.modo=v==="rolagem"?"rolagem":"topicos";s.at=Date.now();salvar();rerender();}
