@@ -525,6 +525,29 @@ nav.nav button:active i{transform:scale(.94)}
 #upd .t{flex:1;min-width:0}#upd b{display:block;font-size:14.5px}#upd small{color:var(--muted);font-size:12.5px}
 #upd .go{flex:none;height:40px;padding:0 16px;border-radius:12px;background:var(--gold);color:var(--gold-ink);font-weight:700}
 #upd .x{flex:none;width:34px;height:34px;border-radius:10px;color:var(--muted)}
+
+/* assistente de IA */
+.iactx{display:flex;align-items:center;gap:10px;padding:0 14px;height:48px;margin-bottom:12px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--gold)}
+.iactx select{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:0;color:var(--text);font-size:14.5px;text-overflow:ellipsis}
+.iaq{display:flex;flex-direction:column;gap:8px}
+.iaq button{text-align:left;padding:13px 16px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-weight:600;font-size:14.5px}
+.iam{display:flex;flex-direction:column;gap:10px;padding-bottom:6px}
+.ib2{max-width:88%;padding:12px 14px;border-radius:18px;line-height:1.55;font-size:15.5px;overflow-wrap:anywhere}
+.ib2.u{align-self:flex-end;background:var(--gold);color:var(--gold-ink);border-bottom-right-radius:6px}
+.ib2.a{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:6px}
+.ib2 .err{color:var(--red)}
+.iaac{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.iaac button{padding:6px 12px;border-radius:99px;background:var(--card2);border:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.pens{display:flex;gap:5px;padding:16px 18px}.pens i{width:8px;height:8px;border-radius:50%;background:var(--muted);animation:pen 1s infinite ease-in-out}.pens i:nth-child(2){animation-delay:.15s}.pens i:nth-child(3){animation-delay:.3s}
+@keyframes pen{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.iaclr{display:block;margin:6px auto 0;padding:8px 14px;font-size:13px;color:var(--muted)}
+.iaform{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:600px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;padding:8px;border-radius:26px;background:color-mix(in srgb,var(--card) 96%,transparent);border:1px solid var(--line);box-shadow:0 18px 40px -14px #000c;z-index:8}
+.iaform textarea{flex:1;min-width:0;min-height:44px;max-height:140px;padding:11px 12px;background:transparent;border:0;outline:0;resize:none;color:var(--text);font-size:16px;line-height:1.35}
+.iaform button{flex:none;width:44px;height:44px;border-radius:50%;background:var(--gold);color:var(--gold-ink);display:grid;place-items:center}
+.iaform button:disabled{opacity:.4}
+.iaprev{padding:12px 14px;border-radius:14px;background:var(--card2);border:1px solid var(--line);color:var(--muted);font-size:14px;line-height:1.5;max-height:140px;overflow:auto;margin-bottom:12px}
+.iaacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.iaacts button{padding:12px 8px;border-radius:14px;background:var(--card2);border:1px solid var(--line);font-weight:600;font-size:14px}
+.iares{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--gold-soft);border:1px solid var(--gold-line);line-height:1.55;max-height:240px;overflow:auto}
 </style>
 </head>
 <body>
@@ -1175,6 +1198,7 @@ const IC={
  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
  bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
+ spark:'<path d="M12 3l1.9 5.4L19.5 10l-5.6 1.7L12 17l-1.9-5.3L4.5 10l5.6-1.6z"/><path d="M19 16v4M17 18h4"/>',
  cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>',
  cross:'<path d="M12 3v18M6 9h12"/>',
@@ -1196,9 +1220,10 @@ function nav(){
 }
 function render(){
   setTimeout(selbar,0);
-  document.body.classList.toggle("sem-nav",V.tela==="edit");
+  document.body.classList.toggle("sem-nav",V.tela==="edit"||V.tela==="ia");
   if(V.tela==="edit")return renderEdit();
   if(V.tela==="ilus")return renderIlus();
+  if(V.tela==="ia")return renderIA();
   ({inicio:renderInicio,msgs:renderMsgs,biblia:renderBiblia,agenda:renderAgenda,mais:renderMais})[V.tab]();
 }
 function metaEv(e){return dataBR(e.data)+(e.hora?" · "+e.hora:"")+(e.local?" · "+esc(e.local):"");}
@@ -1358,6 +1383,7 @@ function renderMais(){
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
   ${tile("biblia","book","Bíblia",(versList()[ver]||VERS.acf).n)}
   ${tile("preg","timer","Pregação","Sinal, tempo e letra")}
+  ${tile("ia","spark","Assistente de IA",iaCfg().k?"Com a sua chave neste aparelho":"Dúvidas, correção e ideias","iaabrir")}
   ${tile("ilus","bulb","Ilustrações",(db.ilus||[]).length?(db.ilus.length+" guardadas"):"Histórias e citações","ilusabrir")}
   ${tile("mapa","book","Livros e capítulos","Resumo do que você já usou")}
   ${tile("lixeira","trash","Lixeira",(db.lixeira||[]).length?(db.lixeira.length+" sermão(ões) · 30 dias"):"Sermões excluídos")}
@@ -1410,7 +1436,7 @@ function blocoEd(b,i,n){
   else if(b.tipo==="lista")c=`<textarea class="in" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<textarea class="in" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
   else c=`<textarea class="in" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
-  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}" aria-label="Começar um novo tópico a partir deste bloco">⤓ Novo tópico</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
+  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}" aria-label="Começar um novo tópico a partir deste bloco">⤓ Novo tópico</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="iabloco" data-v="${b.id}" aria-label="Assistente de IA neste texto">${ico("spark",14)}</button><button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
 }
 const WPM=130;
 function palT(t){let n=0;t.blocos.forEach(b=>{if(b.tipo==="obs")return;const x=b.tipo==="texto"?plain(b.t):(b.t||"");const w=x.split(/\s+/).filter(Boolean).length;n+=b.tipo==="biblico"?Math.round(w*.8):w;});return n;}
@@ -1849,6 +1875,80 @@ function abrirImportar(){
   $("modal").classList.add("show");
 }
 
+
+/* ---------- Assistente de IA (chave de cada aparelho) ---------- */
+let IA={msgs:[],ctx:true,busy:false,cfg:null,sid:"",res:"",blk:null,setup:false};
+const IAP={claude:{n:"Claude",m:"claude-sonnet-5-5",l:"console.anthropic.com → API keys"},gemini:{n:"Gemini",m:"gemini-flash-latest",l:"aistudio.google.com/apikey"},openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys"}};
+function iaCfg(){if(!IA.cfg){try{IA.cfg=JSON.parse(localStorage.getItem("pulpito.ia")||"{}");}catch(e){IA.cfg={};}}return IA.cfg;}
+function iaSave(){try{localStorage.setItem("pulpito.ia",JSON.stringify(IA.cfg));}catch(e){}}
+async function iaChamar(msgs,sys){
+  const c=iaCfg(),p=IAP[c.p]?c.p:"claude",m=c.m||IAP[p].m,k=c.k;let r,j={};
+  const mm=msgs.map(x=>({role:x.r==="u"?"user":"assistant",content:x.t}));
+  try{
+    if(p==="claude")r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:m,max_tokens:1800,system:sys,messages:mm})});
+    else if(p==="gemini")r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(m)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:mm.map(x=>({role:x.role==="user"?"user":"model",parts:[{text:x.content}]}))})});
+    else r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+k},body:JSON.stringify({model:m,messages:[{role:"system",content:sys},...mm]})});
+  }catch(e){throw new Error("Sem conexão com a IA. Confira a internet.");}
+  try{j=await r.json();}catch(e){}
+  if(!r.ok){const c0=r.status,em=j&&j.error&&(j.error.message||j.error);throw new Error(c0===401||c0===403?"Chave recusada. Confira se foi copiada inteira.":c0===429?"Limite de uso atingido. Tente de novo em instantes.":em?String(em).slice(0,160):"Erro "+c0);}
+  const t=p==="claude"?(j.content||[]).map(x=>x.text||"").join(""):p==="gemini"?((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(x=>x.text||"").join(""):((((j.choices||[])[0]||{}).message||{}).content||"");
+  if(!t)throw new Error("A IA não devolveu resposta.");
+  return t.trim();
+}
+function iaSystem(){
+  let t="Você é um assistente para pregadores e professores cristãos evangélicos, em português do Brasil. Seja claro, direto e fiel à Bíblia. Nunca invente versículos, citações ou fatos; se não tiver certeza, diga. Ao reescrever textos, preserve o estilo e a voz de quem escreveu.";
+  const sm=IA.ctx&&IA.sid&&sermao(IA.sid);
+  if(sm){
+    let x="Título: "+(sm.titulo||"")+"\nTexto base: "+(sm.base||"")+"\nTempo: "+sm.min+" min\n";
+    sm.topicos.forEach((tp,i)=>{x+="\nTópico "+(i+1)+": "+(tp.titulo||"")+(tp.ref?" ("+tp.ref+")":"")+"\n"+tp.blocos.map(b=>b.tipo==="texto"?plain(b.t):(b.ref?b.ref+" ":"")+(b.t||"")).join("\n")+"\n";});
+    t+="\n\nSermão em preparação (use como contexto quando fizer sentido):\n"+x.slice(0,12000);
+  }
+  return t;
+}
+const iaHtml=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
+function iaIdPadrao(){return (V.tela==="ia"&&IA.sid&&sermao(IA.sid))?IA.sid:(V.id&&sermao(V.id)?V.id:(db.sermoes.slice().sort((a,b)=>Math.max(b.aberto,b.at)-Math.max(a.aberto,a.at))[0]||{}).id||"");}
+function renderIA(){
+  const c=iaCfg(),pv=IAP[c.p]?c.p:"claude";
+  let h=`<div class="top"><button class="ib" data-a="iafecha" aria-label="Voltar">←</button><h1>Assistente</h1><button class="ib" data-a="iaconf" aria-label="Configurar">${ico("more",20)}</button></div>`;
+  if(!c.k||IA.setup){
+    h+=`<p class="sd2">Use a sua própria IA. A chave fica só neste aparelho e não é sincronizada nem entra na cópia de segurança.</p>
+    <div class="card"><h3>Qual IA você usa?</h3><div class="seg eq">${Object.keys(IAP).map(k=>`<button class="${pv===k?"on":""}" data-a="iaprov" data-v="${k}">${IAP[k].n}</button>`).join("")}</div>
+    <label class="f">Chave de acesso (API key)</label><input class="in" id="ia-k" type="password" autocomplete="off" placeholder="Cole a chave aqui" value="${esc(c.k||"")}">
+    <p class="meta" style="margin-top:6px">Como obter: ${IAP[pv].l}. O uso é cobrado na conta de quem criou a chave.</p>
+    <label class="f">Modelo (opcional)</label><input class="in" id="ia-m" placeholder="${IAP[pv].m}" value="${esc(c.m||"")}">
+    <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="iasalva">Salvar e começar</button>${c.k?`<button class="btn danger" data-a="iatira">Remover chave</button>`:""}</div></div>`;
+    $("app").innerHTML=h;return;
+  }
+  IA.sid=IA.sid&&sermao(IA.sid)?IA.sid:iaIdPadrao();
+  h+=`<div class="iactx"><span>${ico("book",15)}</span><select id="ia-s" aria-label="Sermão de contexto"><option value="">Sem sermão (conversa livre)</option>${db.sermoes.map(x=>`<option value="${x.id}" ${IA.ctx&&IA.sid===x.id?"selected":""}>${esc(x.titulo||"Sem título")}</option>`).join("")}</select></div>`;
+  if(!IA.msgs.length){
+    const q=[["Explicar o texto base","Explique o texto base deste sermão: contexto histórico, contexto literário e a ideia central."],["Sugerir ilustrações","Sugira 3 ilustrações curtas e fiéis ao texto para este sermão."],["Aplicações práticas","Sugira aplicações práticas para a vida do ouvinte a partir deste sermão."],["Revisar o sermão","Leia o sermão e aponte pontos fortes, lacunas e trechos confusos, com sugestões objetivas."]];
+    h+=`<div class="vazio">${ico("spark",34)}<b>Como posso ajudar?</b><p>Tire dúvidas de contexto, peça ideias ou revisão. Se escolher um sermão acima, eu leio ele antes de responder.</p></div><div class="iaq">${q.map(([a,b])=>`<button data-a="iaq" data-v="${esc(b)}">${a}</button>`).join("")}</div>`;
+  }else{
+    h+=`<div class="iam">${IA.msgs.map((m,i)=>`<div class="ib2 ${m.r}">${m.r==="a"&&m.e?`<span class="err">${esc(m.t)}</span>`:iaHtml(m.t)}${m.r==="a"&&!m.e?`<div class="iaac"><button data-a="iacopy" data-v="${i}">Copiar</button><button data-a="iaguarda" data-v="${i}">Guardar nas ilustrações</button></div>`:""}</div>`).join("")}${IA.busy?`<div class="ib2 a pens"><i></i><i></i><i></i></div>`:""}</div><button class="iaclr" data-a="ianova">Nova conversa</button>`;
+  }
+  h+=`<div class="iaform"><textarea id="ia-t" rows="1" placeholder="Pergunte algo…"></textarea><button data-a="iasend" aria-label="Enviar" ${IA.busy?"disabled":""}>${ico("arrow",20)}</button></div>`;
+  $("app").innerHTML=h;
+  if(IA.msgs.length)setTimeout(()=>scrollTo(0,document.body.scrollHeight),30);
+}
+async function iaEnviar(txt){
+  txt=(txt||"").trim();if(!txt||IA.busy)return;
+  IA.msgs.push({r:"u",t:txt});IA.busy=true;renderIA();
+  try{const r=await iaChamar(IA.msgs.filter(x=>!x.e),iaSystem());IA.msgs.push({r:"a",t:r});}
+  catch(e){IA.msgs.push({r:"a",t:e.message||"Não consegui responder.",e:1});}
+  IA.busy=false;if(V.tela==="ia")renderIA();
+}
+function abrirIABloco(tid,bid){
+  const t=cur()&&cur().topicos.find(x=>x.id===tid),b=t&&t.blocos.find(x=>x.id===bid);if(!b)return;
+  IA.blk={tid,bid};IA.res="";
+  const tx=b.tipo==="texto"?plain(b.t):(b.t||"");
+  $("mb").innerHTML=`<h3>Assistente neste texto</h3>
+  <div class="iaprev">${esc(tx.slice(0,400))}${tx.length>400?"…":""}</div>
+  ${iaCfg().k?`<div class="iaacts"><button data-a="iafaz" data-v="corrigir">Corrigir</button><button data-a="iafaz" data-v="melhorar">Melhorar clareza</button><button data-a="iafaz" data-v="encurtar">Encurtar</button><button data-a="iafaz" data-v="aplicar">Dar aplicação</button></div><div id="ia-res"></div>`:`<p class="meta">Configure o assistente primeiro, em Mais → Assistente de IA.</p><div class="bar"><button class="btn gold" data-a="iaabrir2">Configurar agora</button></div>`}
+  <div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
+  $("modal").classList.add("show");
+}
+
 /* ---------- Banco de ilustrações ---------- */
 let ILUSP=null,ILE=null;
 function renderIlus(){
@@ -2235,6 +2335,30 @@ document.addEventListener("click",e=>{
   else if(a==="grupo"){V.grupo=v;db.cfg.agr=v;salvar();fechar();renderMsgs();}
   else if(a==="agrupar")abrirAgrupar();
   else if(a==="filtro"){V.filtro=v;renderMsgs();}
+  else if(a==="iaabrir"){V.tela="ia";IA.setup=false;IA.sid=iaIdPadrao();render();scrollTo(0,0);}
+  else if(a==="iaabrir2"){fechar();V.tela="lista";V.tab="mais";IA.setup=true;V.tela="ia";render();}
+  else if(a==="iafecha"){V.tela=V.id&&V.voltaEdit?"edit":"lista";V.tab="mais";IA.setup=false;render();scrollTo(0,0);}
+  else if(a==="iaconf"){IA.setup=!IA.setup;renderIA();}
+  else if(a==="iaprov"){iaCfg().p=v;iaCfg().k=($("ia-k")||{}).value||iaCfg().k||"";IA.cfg.m="";renderIA();}
+  else if(a==="iasalva"){const k=($("ia-k").value||"").trim();if(!k){toast("Cole a chave de acesso");return;}iaCfg().k=k;IA.cfg.m=($("ia-m").value||"").trim();if(!IAP[IA.cfg.p])IA.cfg.p="claude";iaSave();IA.setup=false;toast("Assistente pronto");renderIA();}
+  else if(a==="iatira"){if(confirm("Remover a chave deste aparelho?")){IA.cfg={};iaSave();IA.setup=false;IA.msgs=[];renderIA();}}
+  else if(a==="iaq"){iaEnviar(v);}
+  else if(a==="iasend"){const e=$("ia-t");const t=e&&e.value;if(e)e.value="";iaEnviar(t);}
+  else if(a==="ianova"){IA.msgs=[];renderIA();}
+  else if(a==="iacopy"){const m=IA.msgs[+v];if(m)copiar(m.t);}
+  else if(a==="iaguarda"){const m=IA.msgs[+v];if(m)abrirIlus("",{tit:"",txt:m.t,tags:[],fonte:""});}
+  else if(a==="iabloco"){const t=achaT(b);if(t)abrirIABloco(t.id,v);}
+  else if(a==="iafaz"){
+    const t=cur().topicos.find(x=>x.id===IA.blk.tid),bl=t&&t.blocos.find(x=>x.id===IA.blk.bid);if(!bl)return;
+    const tx=bl.tipo==="texto"?plain(bl.t):(bl.t||"");
+    const P={corrigir:"Corrija apenas ortografia, gramática e pontuação do texto abaixo, sem mudar o sentido nem o estilo. Devolva somente o texto corrigido.",melhorar:"Reescreva o texto abaixo com mais clareza e fluidez, mantendo o sentido, o tom e a voz do pregador. Devolva somente o texto.",encurtar:"Reduza o texto abaixo para cerca de metade, mantendo as ideias principais. Devolva somente o texto.",aplicar:"Escreva 2 ou 3 aplicações práticas curtas para o ouvinte, a partir do texto abaixo. Devolva somente as aplicações."}[v];
+    const box=$("ia-res");box.innerHTML=`<p class="meta" style="margin:12px 0">Pensando…</p>`;
+    iaChamar([{r:"u",t:P+"\n\n"+tx}],iaSystem()).then(r=>{IA.res=r;box.innerHTML=`<div class="iares">${iaHtml(r)}</div><div class="bar" style="margin-top:8px"><button class="btn gold" data-a="iausa">${v==="aplicar"?"Adicionar ao tópico":"Substituir texto"}</button><button class="btn" data-a="iacopy2">Copiar</button></div>`;IA.mode=v;}).catch(e=>{box.innerHTML=`<p class="meta" style="margin:12px 0;color:var(--red)">${esc(e.message)}</p>`;});
+  }
+  else if(a==="iacopy2"){if(IA.res)copiar(IA.res);}
+  else if(a==="iausa"){const s0=cur(),t=s0&&s0.topicos.find(x=>x.id===IA.blk.tid),bl=t&&t.blocos.find(x=>x.id===IA.blk.bid);if(!bl||!IA.res)return;
+    if(IA.mode==="aplicar")t.blocos.splice(t.blocos.indexOf(bl)+1,0,{id:uid(),tipo:"texto",t:iaHtml(IA.res)});else bl.t=iaHtml(IA.res);
+    s0.at=Date.now();salvar();fechar();rerender();toast(IA.mode==="aplicar"?"Aplicação adicionada":"Texto substituído");}
   else if(a==="ilusabrir"){V.tela="ilus";V.iq="";V.itag="";render();scrollTo(0,0);}
   else if(a==="ilusfecha"){V.tela="lista";V.tab="mais";render();scrollTo(0,0);}
   else if(a==="ilusnova")abrirIlus();
@@ -2404,10 +2528,12 @@ document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.b==="ref"&&V.tela==="edit"){const t=achaT(e.target),bl=t.blocos.find(x=>x.id===e.target.closest("[data-bid]").dataset.bid),tx=textoRef(bl.ref);if(tx&&!bl.t){bl.t=tx;salvar();rerender();}}
 });
 function input(){}
+document.addEventListener("change",e=>{const t=e.target;if(t&&t.id==="ia-s"){IA.sid=t.value;IA.ctx=!!t.value;}});
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="q"){V.q=t.value;renderMsgs();return;}
   if(t.id==="iq"){V.iq=t.value;renderIlus();return;}
+  if(t.id==="ia-t"){t.style.height="auto";t.style.height=Math.min(140,t.scrollHeight)+"px";return;}
   if(t.id==="bq"){V.bq=t.value;clearTimeout(input.t);input.t=setTimeout(()=>{if(V.tab!=="biblia"||V.bk!==null)return;const f=document.activeElement&&document.activeElement.id==="bq";renderBiblia();if(f){const e=$("bq");e.focus();e.setSelectionRange(e.value.length,e.value.length);}},350);return;}
   if(V.tela!=="edit"||!cur()||t.closest("#modal"))return;
   const s=cur();
@@ -2441,7 +2567,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="28";
+const VER="29";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
