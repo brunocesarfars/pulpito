@@ -486,6 +486,45 @@ nav.nav button:active i{transform:scale(.94)}
 .ctl .meta{font-size:13.5px}
 .chip{display:inline-flex;align-items:center;gap:5px;line-height:1.35;padding:3px 11px}
 .chips{align-items:center}
+
+/* ilustrações, vazio, novos controles */
+.ilc{display:block;width:100%;text-align:left;padding:15px 16px;margin-bottom:10px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 30px -26px #000d}
+.ilc b{display:block;font-family:var(--display);font-size:17px;line-height:1.25}
+.ilc .ex{display:block;margin-top:5px;color:var(--muted);font-size:14px;line-height:1.5}
+.ilc .chip.fonte{background:transparent;font-style:italic}
+.ilc:active{transform:scale(.99);border-color:var(--gold-line)}
+.ilp{max-height:52vh;overflow:auto;margin:0 -4px;padding:0 4px}
+.vazio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:40px 20px;color:var(--muted)}
+.vazio svg{color:var(--gold)}.vazio b{color:var(--text);font-family:var(--display);font-size:19px}.vazio p{max-width:300px;line-height:1.5}.vazio .btn{margin-top:8px}
+/* seletor de horário */
+.hbtn{display:flex;align-items:center;justify-content:space-between;width:100%;height:50px;padding:0 14px;border-radius:14px;background:var(--card2);border:1px solid var(--line);font-size:16px;font-weight:600}
+.hbtn small{color:var(--muted);font-weight:500}
+.tpick{margin:10px 0 4px;padding:14px;border-radius:18px;background:var(--card2);border:1px solid var(--line)}
+.tpick h4{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:0 0 8px}
+.tpq{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tpq button,.tpg button,.tpm button{border-radius:12px;background:var(--card);border:1px solid var(--line);font-weight:600;font-size:15px}
+.tpq button{padding:8px 12px}
+.tpg{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
+.tpg button{height:42px}
+.tpm{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.tpm button{height:42px}
+.tpick button.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.tpick .lim{display:block;width:100%;margin-top:12px;height:40px;border-radius:12px;color:var(--muted);font-size:14px}
+/* importar */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 4px}
+.opt{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;padding:14px;border-radius:18px;background:var(--card2);border:1.5px solid var(--line)}
+.opt .ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--card);color:var(--muted)}
+.opt b{font-size:14.5px;line-height:1.2}.opt small{font-size:12px;color:var(--muted);line-height:1.35}
+.opt.on{border-color:var(--gold);background:var(--gold-soft)}.opt.on .ic{background:var(--gold);color:var(--gold-ink)}
+.drop{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:22px 16px;margin:14px 0;border-radius:20px;border:2px dashed var(--gold-line);background:var(--gold-soft);cursor:pointer}
+.drop .ic{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--gold-ink)}
+.drop b{font-size:16px}.drop small{color:var(--muted)}
+.ou{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:2px 0 10px}.ou::before,.ou::after{content:"";flex:1;height:1px;background:var(--line)}
+/* aviso de atualização */
+#upd{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));max-width:560px;margin:0 auto;z-index:60;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border-radius:20px;background:var(--card2);border:1px solid var(--gold-line);box-shadow:0 20px 50px -14px #000e;animation:ent .25s ease both}
+#upd .t{flex:1;min-width:0}#upd b{display:block;font-size:14.5px}#upd small{color:var(--muted);font-size:12.5px}
+#upd .go{flex:none;height:40px;padding:0 16px;border-radius:12px;background:var(--gold);color:var(--gold-ink);font-weight:700}
+#upd .x{flex:none;width:34px;height:34px;border-radius:10px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1083,9 +1122,10 @@ function ajustar(){
   db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
   db.eventos=(Array.isArray(db.eventos)?db.eventos:[]).filter(e=>e&&typeof e==="object");db.pastas=Array.isArray(db.pastas)?db.pastas:[];
   db.sermoes=db.sermoes.filter(s=>s&&typeof s==="object");
+  db.ilus=(Array.isArray(db.ilus)?db.ilus:[]).filter(x=>x&&x.id).map(x=>{x.tit=x.tit||"";x.txt=x.txt||"";x.fonte=x.fonte||"";x.tags=Array.isArray(x.tags)?x.tags:[];x.at=x.at||Date.now();return x;});
   db.lixeira=(Array.isArray(db.lixeira)?db.lixeira:[]).filter(x=>x&&x.id&&Date.now()-(x.delAt||0)<30*864e5);
   db.sermoes.forEach(s=>{if(!s.id)s.id=uid();
-    s.status=s.status||"rascunho";s.modo=s.modo==="rolagem"?"rolagem":"topicos";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
+    s.serie=typeof s.serie==="string"?s.serie:"";s.serieN=+s.serieN||0;s.status=s.status||"rascunho";s.modo=s.modo==="rolagem"?"rolagem":"topicos";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
     s.topicos=(Array.isArray(s.topicos)?s.topicos:[]).filter(t=>t&&typeof t==="object");
     s.topicos.forEach(t=>{
       if(!t.id)t.id=uid();
@@ -1104,9 +1144,11 @@ function salvarJa(){clearTimeout(saveT);try{localStorage.setItem(LS,JSON.stringi
 addEventListener("pagehide",salvarJa);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)salvarJa();});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+function copiar(t){let ok=false;try{navigator.clipboard.writeText(t);ok=true;}catch(e){}if(!ok){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch(e){}ta.remove();}toast("Copiado");}
 function toast(t,ms){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),ms||1800);}
 const sermao=id=>db.sermoes.find(s=>s.id===id);
 const livrosDo=s=>{const set=new Set();s.topicos.forEach(t=>{const l=livroDe(t.ref);if(l)set.add(l);});const b=livroDe(s.base);if(b)set.add(b);return LIVROS.filter(l=>set.has(l));};
+const seriesTodas=()=>[...new Set(db.sermoes.map(s=>s.serie).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt"));
 const pastasTodas=()=>[...new Set([...db.pastas,...db.sermoes.map(s=>s.pasta).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,"pt"));
 const proxEventos=()=>{const h=hoje();return db.eventos.filter(e=>e.data>=h).sort((a,b)=>(a.data+(a.hora||"")).localeCompare(b.data+(b.hora||"")));};
 
@@ -1156,6 +1198,7 @@ function render(){
   setTimeout(selbar,0);
   document.body.classList.toggle("sem-nav",V.tela==="edit");
   if(V.tela==="edit")return renderEdit();
+  if(V.tela==="ilus")return renderIlus();
   ({inicio:renderInicio,msgs:renderMsgs,biblia:renderBiblia,agenda:renderAgenda,mais:renderMais})[V.tab]();
 }
 function metaEv(e){return dataBR(e.data)+(e.hora?" · "+e.hora:"")+(e.local?" · "+esc(e.local):"");}
@@ -1191,16 +1234,18 @@ function agrupar(lista){
   const m=new Map(),add=(k,s)=>{if(!m.has(k))m.set(k,[]);m.get(k).push(s);};
   lista.forEach(s=>{
     if(V.grupo==="livro"){const ls=livrosDo(s);if(ls.length)ls.forEach(l=>add(l,s));else add("Sem livro",s);}
+    else if(V.grupo==="serie")add(s.serie||"Sem série",s);
     else if(V.grupo==="assunto")add(s.assunto||"Sem assunto",s);
     else add(stNome(s.status),s);
   });
   let ks=[...m.keys()];
   if(V.grupo==="livro")ks.sort((a,b)=>(LIVROS.indexOf(a)<0?999:LIVROS.indexOf(a))-(LIVROS.indexOf(b)<0?999:LIVROS.indexOf(b)));
   else if(V.grupo==="status")ks.sort((a,b)=>STATUS.findIndex(x=>x[1]===a)-STATUS.findIndex(x=>x[1]===b));
+  else if(V.grupo==="serie"){ks.sort((a,b)=>a==="Sem série"?1:b==="Sem série"?-1:a.localeCompare(b,"pt"));m.forEach(l=>l.sort((a,b)=>(a.serieN||1e4)-(b.serieN||1e4)||a.at-b.at));}
   else ks.sort((a,b)=>a.localeCompare(b,"pt"));
   return ks.map(k=>({h:k,it:m.get(k)}));
 }
-const GRUPOS=[["todos","Sem agrupar","Lista simples, mais recentes primeiro"],["livro","Livro da Bíblia","Pelos livros usados nos tópicos"],["assunto","Assunto","Pelo tema de cada mensagem"],["status","Status","Ideia, rascunho, pronto, pregado"]];
+const GRUPOS=[["todos","Sem agrupar","Lista simples, mais recentes primeiro"],["serie","Série","Mensagens em sequência, como Romanos ou Salmos"],["livro","Livro da Bíblia","Pelos livros usados nos tópicos"],["assunto","Assunto","Pelo tema de cada mensagem"],["status","Status","Ideia, rascunho, pronto, pregado"]];
 function abrirAgrupar(){
   $("mb").innerHTML=`<h3>Agrupar mensagens</h3><div class="rows">${GRUPOS.map(([k,n,d])=>linha(V.grupo===k?ico("star",18):ico("sort",18),n,d,"grupo",k)).join("")}</div><div class="bar"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
@@ -1208,7 +1253,7 @@ function abrirAgrupar(){
 function cartao(s){
   const ls=livrosDo(s),n=s.hist.length,ult=n?s.hist.map(x=>x.data).sort().pop():"";
   return `<div class="sc3 s-${s.status}"><button class="sb3" data-a="abrir" data-v="${s.id}">
-    <span class="chips" style="margin:0"><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}</span>
+    <span class="chips" style="margin:0"><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.serie?`<span class="chip">${esc(s.serie)}${s.serieN?" · "+s.serieN:""}</span>`:""}${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}</span>
     <b>${esc(s.titulo||"Sem título")}</b>
     <span class="sm"><span>${ico("clock",14)}${s.min} min</span><span>${ico("list",14)}${s.topicos.length} tópico${s.topicos.length===1?"":"s"}</span>${ls.length?`<span>${ico("book",14)}${esc(ls.slice(0,2).join(", ")+(ls.length>2?"…":""))}</span>`:""}</span></button>
     <button class="stb ${s.fav?"on":""}" data-a="fav" data-v="${s.id}" aria-label="Favoritar">${ico("star",20)}</button>
@@ -1227,7 +1272,7 @@ function renderMsgs(){
   h+=`<div class="ctl"><span class="meta">${lista.length} mensage${lista.length===1?"m":"ns"}</span><button class="agr" data-a="agrupar">${ico("sort",16)}${gn}</button></div>`;
   if(!lista.length)h+=`<p class="empty">${db.sermoes.length?"Nada encontrado.":"Nenhuma mensagem ainda. Toque em + para criar."}</p>`;
   grupos.forEach(g=>{
-    if(g.h)h+=`<div class="gh2"><span>${esc(g.h)}</span><i>${g.it.length}</i></div>`;
+    if(g.h)h+=`<div class="gh2"><span>${esc(g.h)}</span><i>${g.it.length}${V.grupo==="serie"&&g.h!=="Sem série"?" · "+g.it.filter(x=>x.hist.length).length+" pregadas":""}</i></div>`;
     h+=`<div class="lista-msgs">${g.it.map(cartao).join("")}</div>`;
   });
   h+=`<button class="fab" data-a="novo" aria-label="Nova mensagem">${ico("plus",26)}</button>`;
@@ -1313,6 +1358,7 @@ function renderMais(){
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
   ${tile("biblia","book","Bíblia",(versList()[ver]||VERS.acf).n)}
   ${tile("preg","timer","Pregação","Sinal, tempo e letra")}
+  ${tile("ilus","bulb","Ilustrações",(db.ilus||[]).length?(db.ilus.length+" guardadas"):"Histórias e citações","ilusabrir")}
   ${tile("mapa","book","Livros e capítulos","Resumo do que você já usou")}
   ${tile("lixeira","trash","Lixeira",(db.lixeira||[]).length?(db.lixeira.length+" sermão(ões) · 30 dias"):"Sermões excluídos")}
   ${tile("sobre","info","Sobre","Púlpito")}
@@ -1346,7 +1392,7 @@ function abrirSheet(k){
   else if(k==="tema")h=`<h3>Aparência</h3>${segV([["auto","Automático"],["claro","Claro"],["escuro","Escuro"]],c.tema,"tema")}<p class="meta">Automático segue o tema do celular.</p>`;
   else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Adicionar minha Bíblia","NVI, ARA ou NAA do seu arquivo","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
   else if(k==="preg")h=`<h3>Pregação</h3><div class="rows">${linha(ico("bell",18),"Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha(ico("timer",18),"Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha(ico("type",18),"Letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>`;
-  else h=`<h3>Púlpito</h3><p class="meta">Seus sermões ficam guardados neste aparelho. Faça cópia de segurança de vez em quando, principalmente antes de limpar os dados do navegador.</p><p class="meta" style="margin-top:8px">Bíblias: ACF, KJV e BBE incluídas. Outras versões você adiciona do seu próprio arquivo.</p>`;
+  else h=`<h3>Púlpito</h3><p class="meta" style="margin-bottom:6px">Versão ${VER}</p><div class="rows" style="margin-bottom:10px">${linha(ico("down",18),"Verificar atualização","Procura uma versão mais nova","chkupd")}</div><p class="meta">Seus sermões ficam guardados neste aparelho. Faça cópia de segurança de vez em quando, principalmente antes de limpar os dados do navegador.</p><p class="meta" style="margin-top:8px">Bíblias: ACF, KJV e BBE incluídas. Outras versões você adiciona do seu próprio arquivo.</p>`;
   $("mb").innerHTML=h+`<div class="bar" style="margin-top:14px"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
@@ -1364,7 +1410,7 @@ function blocoEd(b,i,n){
   else if(b.tipo==="lista")c=`<textarea class="in" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<textarea class="in" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
   else c=`<textarea class="in" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
-  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}" aria-label="Começar um novo tópico a partir deste bloco">⤓ Novo tópico</button><button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
+  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}" aria-label="Começar um novo tópico a partir deste bloco">⤓ Novo tópico</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
 }
 const WPM=130;
 function palT(t){let n=0;t.blocos.forEach(b=>{if(b.tipo==="obs")return;const x=b.tipo==="texto"?plain(b.t):(b.t||"");const w=x.split(/\s+/).filter(Boolean).length;n+=b.tipo==="biblico"?Math.round(w*.8):w;});return n;}
@@ -1388,6 +1434,9 @@ function renderEdit(y){
   <label class="f" for="f-assunto">Assunto</label>
   <input class="in" id="f-assunto" list="dl-a" placeholder="Ex.: Confiança em Deus nas crises" value="${esc(s.assunto)}">
   <datalist id="dl-a">${assuntos.map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
+  <label class="f" for="f-serie">Série</label>
+  <div class="row"><div style="flex:2"><input class="in" id="f-serie" list="dl-s" placeholder="Ex.: Romanos" value="${esc(s.serie||"")}"></div><div style="flex:1"><input class="in" id="f-serien" type="number" min="1" inputmode="numeric" placeholder="Nº" value="${s.serieN||""}" aria-label="Número na série"></div></div>
+  <datalist id="dl-s">${seriesTodas().map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
   <label class="f" for="f-pasta">Pasta</label>
   <input class="in" id="f-pasta" list="dl-p" placeholder="Sem pasta" value="${esc(s.pasta)}">
   <datalist id="dl-p">${pastasTodas().map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
@@ -1409,7 +1458,7 @@ function renderEdit(y){
       <input class="in" data-f="ref" style="margin-top:8px" placeholder="Versículo (ex.: Marcos 4:37)" value="${esc(t.ref)}" aria-label="Versículo do tópico ${i+1}"><div class="hint" data-hint>${esc(livroDe(t.ref)||"")}</div><button class="btn" style="margin-top:6px" data-a="pick" data-k="topico" data-v="${t.id}">📚 Escolher versículo na Bíblia</button>
       ${t.blocos.map((b,j)=>blocoEd(b,j,t.blocos.length)).join("")}
       <label class="f" style="margin-top:8px">Adicionar ao tópico</label>
-      <div class="ferr">${Object.entries(TIPOS).map(([k,[ic,lb]])=>`<button data-a="addb" data-v="${k}"><i>${ic}</i>${lb}</button>`).join("")}</div>
+      <div class="ferr">${Object.entries(TIPOS).map(([k,[ic,lb]])=>`<button data-a="addb" data-v="${k}"><i>${ic}</i>${lb}</button>`).join("")}<button data-a="ilusins"><i>💡</i>Ilustração</button></div>
       <div class="tools"><button data-a="sobe" data-v="${t.id}" aria-label="Mover tópico para cima">▲</button><button data-a="desce" data-v="${t.id}" aria-label="Mover tópico para baixo">▼</button>${i>0?`<button class="tx" data-a="tjunta" data-v="${t.id}" aria-label="Juntar ao tópico anterior">⤒ Juntar ao anterior</button>`:""}<button data-a="delt" data-v="${t.id}" aria-label="Excluir tópico">✕ Excluir tópico</button></div></div></div>`;
   });
   h+=`<div class="gh" style="margin-top:26px">Quando preguei · ${s.hist.length}</div>`;
@@ -1790,14 +1839,48 @@ async function importarArquivo(f){
 function abrirImportar(){
   IMP.manter=false;
   $("mb").innerHTML=`<h3>Importar sermão</h3>
-  <p class="meta">Escolha um PDF, Word (.docx) ou TXT. O Púlpito lê o texto e separa em tópicos pelos títulos, numerações e negritos. Depois você edita tudo aqui.</p>
-  <label class="f" style="margin-top:0">Como importar</label>
-  <div class="row tm"><button class="on" data-a="impmodo" data-v="topicos">Dividir em tópicos</button><button data-a="impmodo" data-v="arquivo">Manter como no arquivo</button></div>
-  <p class="meta" style="margin:6px 0 10px">Em "Manter como no arquivo" o sermão vira um texto só, na mesma ordem do arquivo, e você pega rolando a tela.</p>
-  <label class="btn gold" for="arq" style="display:flex;align-items:center;justify-content:center;width:100%;margin:8px 0 14px">📂 Escolher arquivo (PDF, Word ou TXT)</label><input type="file" id="arq" aria-label="Escolher arquivo" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
-  <label class="f" for="colar" style="margin-top:0">Ou cole o texto aqui</label>
-  <textarea class="in" id="colar" placeholder="Cole o sermão. Linhas curtas como “1. A tempestade chega” viram tópicos."></textarea>
-  <div class="bar" style="margin-top:12px"><button class="btn gold" data-a="colado">Importar texto</button><button class="btn" data-a="fechar">Fechar</button></div>`;
+  <p class="meta">O Púlpito lê PDF, Word ou texto e mantém parágrafos, recuos, negrito e itálico.</p>
+  <div class="opts"><button class="opt on" data-a="impmodo" data-v="topicos"><span class="ic">${ico("list",18)}</span><b>Dividir em tópicos</b><small>Separa por títulos e numerações</small></button>
+  <button class="opt" data-a="impmodo" data-v="arquivo"><span class="ic">${ico("file",18)}</span><b>Como no arquivo</b><small>Um texto só, para pregar rolando</small></button></div>
+  <label class="drop" for="arq"><span class="ic">${ico("up",22)}</span><b>Escolher arquivo</b><small>PDF, Word (.docx) ou TXT</small></label><input type="file" id="arq" aria-label="Escolher arquivo" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
+  <div class="ou">ou cole o texto</div>
+  <textarea class="in" id="colar" style="min-height:120px" placeholder="Cole o sermão aqui. Linhas curtas como “1. A tempestade chega” viram tópicos."></textarea>
+  <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="colado">Importar texto</button><button class="btn" data-a="fechar">Fechar</button></div>`;
+  $("modal").classList.add("show");
+}
+
+/* ---------- Banco de ilustrações ---------- */
+let ILUSP=null,ILE=null;
+function renderIlus(){
+  const q=norm((V.iq||"").trim()),tg=V.itag||"",L=db.ilus||[];
+  const tags=[...new Set(L.flatMap(x=>x.tags))].sort((a,b)=>a.localeCompare(b,"pt"));
+  const l=L.filter(x=>(!tg||x.tags.includes(tg))&&(!q||norm(x.tit+" "+x.txt+" "+x.tags.join(" ")+" "+x.fonte).includes(q))).sort((a,b)=>b.at-a.at);
+  let h=`<div class="top"><button class="ib" data-a="ilusfecha" aria-label="Voltar">←</button><h1>Ilustrações</h1><button class="ib" data-a="ilusnova" aria-label="Nova ilustração">${ico("plus",20)}</button></div>
+  <p class="sd2">Histórias, citações e exemplos para usar nos seus sermões.</p>
+  <label class="sbox">${ico("search",20)}<input id="iq" type="search" placeholder="Buscar ilustrações" value="${esc(V.iq||"")}"></label>`;
+  if(tags.length)h+=`<div class="seg"><button class="${tg?"":"on"}" data-a="itag" data-v="">Todas</button>${tags.map(t=>`<button class="${tg===t?"on":""}" data-a="itag" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>`;
+  if(!l.length)h+=`<div class="vazio">${ico("bulb",34)}<b>${L.length?"Nada encontrado":"Seu banco está vazio"}</b><p>${L.length?"Tente outra palavra ou etiqueta.":"Guarde histórias, frases e exemplos aqui e use em qualquer sermão. Dá para guardar também direto de um texto do sermão."}</p>${L.length?"":`<button class="btn gold" data-a="ilusnova">+ Nova ilustração</button>`}</div>`;
+  l.forEach(x=>{h+=`<button class="ilc" data-a="ilused" data-v="${x.id}"><b>${esc(x.tit||"Sem título")}</b><span class="ex">${esc(x.txt.replace(/\s+/g," ").slice(0,150))}${x.txt.length>150?"…":""}</span>${x.tags.length||x.fonte?`<span class="chips" style="margin:8px 0 0">${x.tags.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}${x.fonte?`<span class="chip fonte">${esc(x.fonte)}</span>`:""}</span>`:""}</button>`;});
+  const foco=document.activeElement&&document.activeElement.id==="iq";
+  $("app").innerHTML=h+nav();
+  if(foco){const e=$("iq");e.focus();e.setSelectionRange(e.value.length,e.value.length);}
+}
+function abrirIlus(id,pre){
+  const x=id?db.ilus.find(y=>y.id===id):null;ILE={id:id||"",pre:pre||null};
+  const v=x||Object.assign({tit:"",txt:"",tags:[],fonte:""},pre||{});
+  const todas=[...new Set(db.ilus.flatMap(y=>y.tags))];
+  $("mb").innerHTML=`<h3>${x?"Editar ilustração":"Nova ilustração"}</h3>
+  <label class="f" for="il-t" style="margin-top:6px">Título</label><input class="in" id="il-t" placeholder="Ex.: O ferreiro e a bigorna" value="${esc(v.tit)}">
+  <label class="f" for="il-x">Texto</label><textarea class="in" id="il-x" style="min-height:170px" placeholder="Conte a história, a citação ou o exemplo">${esc(v.txt)}</textarea>
+  <label class="f" for="il-g">Etiquetas (separe por vírgula)</label><input class="in" id="il-g" list="dl-il" placeholder="fé, perdão, família" value="${esc(v.tags.join(", "))}"><datalist id="dl-il">${todas.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
+  <label class="f" for="il-f">Fonte (opcional)</label><input class="in" id="il-f" placeholder="Autor, livro ou onde ouviu" value="${esc(v.fonte)}">
+  <div class="bar" style="margin-top:16px"><button class="btn gold" data-a="ilusok">Salvar</button><button class="btn" data-a="fechar">Cancelar</button></div>
+  ${x?`<div class="bar" style="margin-top:8px"><button class="btn" data-a="ilusc">Copiar texto</button><button class="btn danger" data-a="ilusdel">Excluir</button></div>`:""}`;
+  $("modal").classList.add("show");setTimeout(()=>{const e=$(x?"il-x":"il-t");e&&e.focus();},60);
+}
+function abrirIlusPick(){
+  const L=(db.ilus||[]).slice().sort((a,b)=>b.at-a.at);
+  $("mb").innerHTML=`<h3>Inserir ilustração</h3>`+(L.length?`<p class="meta" style="margin-bottom:10px">Toque para colocar no tópico.</p><div class="ilp">${L.map(x=>`<button class="ilc" data-a="ilusput" data-v="${x.id}"><b>${esc(x.tit||"Sem título")}</b><span class="ex">${esc(x.txt.replace(/\s+/g," ").slice(0,110))}…</span></button>`).join("")}</div>`:`<p class="meta">Seu banco está vazio. Crie ilustrações em Mais → Ilustrações.</p>`)+`<div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
 
@@ -1815,12 +1898,24 @@ function abrirEvento(id,ds,msgId){
   const e=id?db.eventos.find(x=>x.id===id):null;EV={id,msgId:e?e.msgId:msgId||""};
   $("mb").innerHTML=`<h3>${e?"Editar evento":"Novo evento"}</h3>
   <label class="f" for="ev-t">Título</label><input class="in" id="ev-t" placeholder="Ex.: Culto de domingo" value="${esc(e?e.titulo:"")}">
-  <div class="row"><div style="flex:1"><label class="f" for="ev-d">Data</label><input class="in" id="ev-d" type="date" value="${e?e.data:(ds||hoje())}"></div><div style="flex:1"><label class="f" for="ev-h">Hora</label><input class="in" id="ev-h" type="time" value="${e?e.hora||"":""}"></div></div>
+  <div class="row"><div style="flex:1"><label class="f" for="ev-d">Data</label><input class="in" id="ev-d" type="date" value="${e?e.data:(ds||hoje())}"></div><div style="flex:1"><label class="f" for="ev-hb">Hora</label><button type="button" class="hbtn" id="ev-hb" data-a="hpick"><span id="hdisp">${e&&e.hora?e.hora:"Sem hora"}</span><small>▾</small></button><input id="ev-h" type="hidden" value="${e?e.hora||"":""}"></div></div><div id="tp"></div>
   <label class="f" for="ev-l">Local</label><input class="in" id="ev-l" placeholder="Igreja ou local" value="${esc(e?e.local||"":"")}">
   <label class="f" for="ev-te">Tema</label><input class="in" id="ev-te" placeholder="Tema do evento" value="${esc(e?e.tema||"":"")}">
   <label class="f" for="ev-m">Mensagem vinculada</label><select class="in" id="ev-m"><option value="">Nenhuma</option>${db.sermoes.map(s=>`<option value="${s.id}" ${EV.msgId===s.id?"selected":""}>${esc(s.titulo||"Sem título")}</option>`).join("")}</select>
   <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="evok">Salvar</button><button class="btn" data-a="fechar">Cancelar</button></div>`;
   $("modal").classList.add("show");
+}
+function horaSet(h,m){
+  const v=h===null?"":pad(h)+":"+pad(m||0);$("ev-h").value=v;$("hdisp").textContent=v||"Sem hora";
+  if($("tp").innerHTML)horaDesenha();
+}
+function horaDesenha(){
+  const v=$("ev-h").value,[hh,mm]=v?v.split(":").map(Number):[-1,-1];
+  const q=["08:00","09:00","10:00","18:00","19:00","19:30","20:00"];
+  $("tp").innerHTML=`<div class="tpick"><h4>Atalhos</h4><div class="tpq">${q.map(x=>`<button data-a="tq" data-v="${x}" class="${v===x?"on":""}">${x}</button>`).join("")}</div>
+  <h4>Hora</h4><div class="tpg">${Array.from({length:24},(_,i)=>`<button data-a="th" data-v="${i}" class="${hh===i?"on":""}">${pad(i)}</button>`).join("")}</div>
+  <h4>Minutos</h4><div class="tpm">${Array.from({length:12},(_,i)=>i*5).map(i=>`<button data-a="tm" data-v="${i}" class="${mm===i?"on":""}">${pad(i)}</button>`).join("")}</div>
+  <button class="lim" data-a="tlimpa">Sem horário definido</button></div>`;
 }
 function abrirVincular(){
   const evs=proxEventos();
@@ -2127,6 +2222,7 @@ function aplicarRestauro(sub){
     d.sermoes.forEach(s=>{if(ids.has(s.id))s.id=uid();db.sermoes.push(s);});
     const ev=new Set(db.eventos.map(e=>e.id));(d.eventos||[]).forEach(e=>{if(!ev.has(e.id))db.eventos.push(e);});
     (d.pastas||[]).forEach(p=>{if(!db.pastas.includes(p))db.pastas.push(p);});
+    const il=new Set((db.ilus||[]).map(x=>x.id));(d.ilus||[]).forEach(x=>{if(!il.has(x.id))db.ilus.push(x);});
   }
   ajustar();aplicaTema();salvar();fechar();V.tela="lista";V.tab="msgs";render();toast("Cópia restaurada",2400);
 }
@@ -2139,6 +2235,32 @@ document.addEventListener("click",e=>{
   else if(a==="grupo"){V.grupo=v;db.cfg.agr=v;salvar();fechar();renderMsgs();}
   else if(a==="agrupar")abrirAgrupar();
   else if(a==="filtro"){V.filtro=v;renderMsgs();}
+  else if(a==="ilusabrir"){V.tela="ilus";V.iq="";V.itag="";render();scrollTo(0,0);}
+  else if(a==="ilusfecha"){V.tela="lista";V.tab="mais";render();scrollTo(0,0);}
+  else if(a==="ilusnova")abrirIlus();
+  else if(a==="ilused")abrirIlus(v);
+  else if(a==="itag"){V.itag=v;renderIlus();}
+  else if(a==="ilusok"){
+    const tit=$("il-t").value.trim(),txt=$("il-x").value.trim();
+    if(!txt&&!tit){toast("Escreva o texto da ilustração");return;}
+    const tags=[...new Set($("il-g").value.split(",").map(x=>x.trim()).filter(Boolean))],fonte=$("il-f").value.trim();
+    if(ILE&&ILE.id){const x=db.ilus.find(y=>y.id===ILE.id);if(x)Object.assign(x,{tit,txt,tags,fonte});}
+    else db.ilus.push({id:uid(),tit:tit||txt.slice(0,40),txt,tags,fonte,at:Date.now()});
+    salvar();fechar();toast("Ilustração guardada");if(V.tela==="ilus")renderIlus();else if(V.tela==="lista"&&V.tab==="mais")renderMais();
+  }
+  else if(a==="ilusdel"){if(ILE&&ILE.id&&confirm("Excluir esta ilustração?")){db.ilus=db.ilus.filter(y=>y.id!==ILE.id);salvar();fechar();toast("Ilustração excluída");renderIlus();}}
+  else if(a==="ilusc"){const x=db.ilus.find(y=>y.id===(ILE&&ILE.id));if(x)copiar(x.tit+"\n\n"+x.txt+(x.fonte?"\n\n— "+x.fonte:""));}
+  else if(a==="ilusins"){const t=achaT(b);if(t){ILUSP={tid:t.id};abrirIlusPick();}}
+  else if(a==="ilusput"){const x=db.ilus.find(y=>y.id===v),s0=cur(),t=s0&&ILUSP&&s0.topicos.find(y=>y.id===ILUSP.tid);if(x&&t){t.blocos.push({id:uid(),tipo:"texto",t:"<b>"+esc(x.tit)+"</b><br>"+esc(x.txt).replace(/\n/g,"<br>")+(x.fonte?"<br><i>— "+esc(x.fonte)+"</i>":"")});s0.at=Date.now();salvar();fechar();rerender();toast("Ilustração inserida");}}
+  else if(a==="ilusdobloco"){const t=achaT(b),bl=t&&t.blocos.find(y=>y.id===v);if(bl){const tx=plain(bl.t||""),ln=tx.split("\n");abrirIlus("",{tit:ln.length>1&&ln[0].length<=70?ln[0]:"",txt:ln.length>1&&ln[0].length<=70?ln.slice(1).join("\n").trim():tx,tags:[],fonte:""});}}
+  else if(a==="hpick"){const tp=$("tp");if(tp.innerHTML)tp.innerHTML="";else horaDesenha();}
+  else if(a==="tq"){const [h,m]=v.split(":").map(Number);horaSet(h,m);}
+  else if(a==="th"){const cur0=$("ev-h").value,m=cur0?+cur0.split(":")[1]:0;horaSet(+v,m);}
+  else if(a==="tm"){const cur0=$("ev-h").value,h=cur0?+cur0.split(":")[0]:19;horaSet(h,+v);}
+  else if(a==="tlimpa"){horaSet(null);$("tp").innerHTML="";}
+  else if(a==="updgo"){window.__atualizando=1;try{salvarJa();}catch(e){}const w=window.__w||(window.__reg&&window.__reg.waiting);if(w)w.postMessage("skip");else location.reload();setTimeout(()=>location.reload(),2500);}
+  else if(a==="updx"){const u=$("upd");if(u)u.remove();}
+  else if(a==="chkupd"){const r=window.__reg;if(!r){toast("Atualização indisponível neste modo");return;}toast("Procurando…");r.update().then(()=>{setTimeout(()=>{if(r.waiting){mostraAtualiza(r.waiting);fechar();}else toast("Você já está na versão mais recente ("+VER+")",2400);},900);}).catch(()=>toast("Sem internet para verificar"));}
   else if(a==="ideia"){const e=$("idq"),t=e&&e.value.trim();if(!t){toast("Escreva a ideia primeiro");return;}db.sermoes.push({id:uid(),titulo:t,assunto:"",pasta:"",min:30,at:Date.now(),status:"ideia",base:"",fav:false,aberto:0,hist:[],topicos:[]});ajustar();salvar();toast("Ideia guardada em Mensagens");render();}
   else if(a==="vdia"){V.tab="biblia";V.sel=new Set();V.bk=+b.dataset.l;V.ch=+b.dataset.c;V.alvo=+(b.dataset.vs||0);V.bq="";db.cfg.ult={l:V.bk,c:V.ch};salvar();renderBiblia();if(!V.alvo)scrollTo(0,0);}
   else if(a==="favs"){V.tab="msgs";V.filtro="favoritas";V.pasta="";render();}
@@ -2285,12 +2407,15 @@ function input(){}
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="q"){V.q=t.value;renderMsgs();return;}
+  if(t.id==="iq"){V.iq=t.value;renderIlus();return;}
   if(t.id==="bq"){V.bq=t.value;clearTimeout(input.t);input.t=setTimeout(()=>{if(V.tab!=="biblia"||V.bk!==null)return;const f=document.activeElement&&document.activeElement.id==="bq";renderBiblia();if(f){const e=$("bq");e.focus();e.setSelectionRange(e.value.length,e.value.length);}},350);return;}
   if(V.tela!=="edit"||!cur()||t.closest("#modal"))return;
   const s=cur();
   if(t.id==="f-titulo")s.titulo=t.value;
   else if(t.id==="f-base"){s.base=t.value;$("hint-base").textContent=livroDe(t.value)||"";}
   else if(t.id==="f-assunto")s.assunto=t.value;
+  else if(t.id==="f-serie")s.serie=t.value;
+  else if(t.id==="f-serien")s.serieN=Math.max(0,+t.value||0);
   else if(t.id==="f-pasta")s.pasta=t.value;
   else if(t.id==="f-min"){const n=Math.round(+t.value);if(n>=1&&n<=300){s.min=n;document.querySelectorAll(".tm button").forEach(x=>{if(x.dataset.a==="tempo")x.classList.remove("on");});}}
   else if(t.dataset.f){
@@ -2316,6 +2441,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
+const VER="28";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
@@ -2324,7 +2450,7 @@ const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.te
 function paraLixeira(o){db.lixeira=(db.lixeira||[]).filter(x=>x.id!==o.id);db.lixeira.unshift(Object.assign(JSON.parse(JSON.stringify(o)),{delAt:Date.now()}));db.lixeira=db.lixeira.slice(0,40);}
 function syncTouch(){
   const m=syncMeta(),now=Date.now(),vistos=new Set();
-  const itens=[...db.sermoes.filter(x=>!x.ex).map(x=>["s",x]),...db.eventos.map(x=>["e",x])];
+  const itens=[...db.sermoes.filter(x=>!x.ex).map(x=>["s",x]),...db.eventos.map(x=>["e",x]),...(db.ilus||[]).map(x=>["i",x])];
   itens.forEach(([k,o])=>{
     vistos.add(o.id);const h=hsh(o);
     if(o.u===undefined){o.u=k==="s"?(o.at||1):1;m.h[o.id]=h;}
@@ -2346,12 +2472,12 @@ function syncApply(){
       if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
       m.p._cfg=Math.max(m.p._cfg===undefined?-1:m.p._cfg,r.u);return;
     }
-    const loc=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id);
+    const loc=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||(db.ilus||[]).find(x=>x.id===id);
     if(r.del){
       if(loc&&r.u>=loc.u){
         if(syncEmUso(id)){rest.push(r);return;}
         if(db.sermoes.includes(loc)&&!loc.ex)paraLixeira(loc);
-        db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);delete m.h[id];mud=true;
+        db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);db.ilus=(db.ilus||[]).filter(x=>x.id!==id);delete m.h[id];mud=true;
       }
       m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);return;
     }
@@ -2360,15 +2486,15 @@ function syncApply(){
       if(loc&&syncEmUso(id)){rest.push(r);return;}
       let o;try{o=JSON.parse(r.d);}catch(e){return;}
       o.u=r.u;
-      db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);
-      (r.k==="e"?db.eventos:db.sermoes).push(o);delete m.tomb[id];aplicados.push(id);mud=true;
+      db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);db.ilus=(db.ilus||[]).filter(x=>x.id!==id);
+      (r.k==="e"?db.eventos:r.k==="i"?db.ilus:db.sermoes).push(o);delete m.tomb[id];aplicados.push(id);mud=true;
       m.p[id]=r.u;
     }else m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);
   });
   SY.rq=rest;
   if(mud){
     ajustar();
-    aplicados.forEach(id=>{const o=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id);if(o)m.h[id]=hsh(o);});
+    aplicados.forEach(id=>{const o=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||db.ilus.find(x=>x.id===id);if(o)m.h[id]=hsh(o);});
     if(cfgMud){m.h._cfg=hsh({d:cfgSync()});aplicaTema();}
     try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}
     if(!P&&V.tela==="lista"&&!$("modal").classList.contains("show"))render();
@@ -2383,6 +2509,7 @@ async function syncPush(){
   const add=(id,u,data)=>{if((m.p[id]===undefined?-1:m.p[id])>=u)return;ops.push({id,u,data});};
   db.sermoes.forEach(o=>{if(!o.ex)add(o.id,o.u,{k:"s",u:o.u,d:JSON.stringify(o)});});
   db.eventos.forEach(o=>add(o.id,o.u,{k:"e",u:o.u,d:JSON.stringify(o)}));
+  (db.ilus||[]).forEach(o=>add(o.id,o.u,{k:"i",u:o.u,d:JSON.stringify(o)}));
   Object.keys(m.tomb).forEach(id=>add(id,m.tomb[id],{del:true,u:m.tomb[id]}));
   add("_cfg",m.cu,{k:"c",u:m.cu,d:JSON.stringify(cfgSync())});
   if(!ops.length){SY.estado="ok";SY.msg="";refazConta();return;}
@@ -2493,7 +2620,25 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&SY.user)s
 try{if(JSON.parse(localStorage.getItem("pulpito.sync")||"{}").logado&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
 render();carregaPropriasBiblias();
 if(!db.cfg.nome&&!db.cfg.nomeAsk){db.cfg.nomeAsk=true;salvar();setTimeout(abrirNome,700);}
-if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+function mostraAtualiza(w){
+  if($("upd"))return;
+  const d=document.createElement("div");d.id="upd";d.setAttribute("role","alert");
+  d.innerHTML=`<div class="t"><b>Nova versão disponível</b><small>Toque em atualizar para usar as novidades.</small></div><button class="go" data-a="updgo">Atualizar</button><button class="x" data-a="updx" aria-label="Depois">✕</button>`;
+  document.body.appendChild(d);window.__w=w;
+}
+if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("sw.js").then(reg=>{
+    window.__reg=reg;
+    const avisa=()=>{if(reg.waiting&&navigator.serviceWorker.controller)mostraAtualiza(reg.waiting);};
+    avisa();
+    reg.addEventListener("updatefound",()=>{const n=reg.installing;if(n)n.addEventListener("statechange",()=>{if(n.state==="installed")avisa();});});
+    const chk=()=>{try{reg.update();}catch(e){}};
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk();});
+    setInterval(chk,20*60*1000);
+  }).catch(()=>{});
+  let rec=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(rec||!window.__atualizando)return;rec=true;location.reload();});
+}
 </script>
 </body>
 </html>
