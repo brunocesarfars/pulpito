@@ -1049,7 +1049,8 @@ function refDe(txt){
 }
 /* ---------- Bíblia (Almeida Corrigida Fiel) ---------- */
 const VERS={acf:{n:"ACF",d:"Almeida Corrigida Fiel (português)"},kjv:{n:"KJV",d:"King James (inglês)",f:"bib-kjv.json"},bbe:{n:"BBE",d:"Bible in Basic English",f:"bib-bbe.json"}};
-const versList=()=>Object.assign({},VERS,Object.fromEntries(((db.cfg&&db.cfg.custom)||[]).map(c=>[c.k,{n:c.n,d:c.n+" (sua cópia, só neste aparelho)",custom:true}])));
+const BMISS=new Set();
+const versList=()=>Object.assign({},VERS,Object.fromEntries(((db.cfg&&db.cfg.custom)||[]).filter(c=>!BMISS.has(c.k)).map(c=>[c.k,{n:c.n,d:c.n+" (sua cópia, só neste aparelho)",custom:true}])));
 function idb(){return new Promise((ok,err)=>{const r=indexedDB.open("pulpito",1);r.onupgradeneeded=()=>r.result.createObjectStore("bib");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
 async function idbGet(k){const d=await idb();return new Promise((ok,err)=>{const q=d.transaction("bib").objectStore("bib").get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>err(q.error);});}
 async function idbSet(k,v){const d=await idb();return new Promise((ok,err)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").put(v,k);t.oncomplete=()=>ok();t.onerror=()=>err(t.error);});}
@@ -1416,7 +1417,7 @@ function abrirSheet(k){
   else if(k==="mapa")h=mapaBiblico();
   else if(k==="lixeira"){const L=db.lixeira||[];h=`<h3>Lixeira</h3><p class="meta" style="margin-bottom:12px">Sermões excluídos ficam aqui por 30 dias.</p>`+(L.length?`<div class="rows">${L.map(x=>linha(ico("up",18),esc(x.titulo||"Sem título"),"Excluído "+new Date(x.delAt).toLocaleDateString("pt-BR")+" · toque para restaurar","lixrest",x.id)).join("")}</div><div class="bar" style="margin-top:10px"><button class="btn danger" data-a="lixvazia">Esvaziar lixeira</button></div>`:`<p class="meta">Nada por aqui.</p>`);}
   else if(k==="tema")h=`<h3>Aparência</h3>${segV([["auto","Automático"],["claro","Claro"],["escuro","Escuro"]],c.tema,"tema")}<p class="meta">Automático segue o tema do celular.</p>`;
-  else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Adicionar minha Bíblia","NVI, ARA ou NAA do seu arquivo","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
+  else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Minhas Bíblias","Adicionar ou excluir NVI, ARA, NAA","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
   else if(k==="preg")h=`<h3>Pregação</h3><div class="rows">${linha(ico("bell",18),"Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha(ico("timer",18),"Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha(ico("type",18),"Letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>`;
   else h=`<h3>Púlpito</h3><p class="meta" style="margin-bottom:6px">Versão ${VER}</p><div class="rows" style="margin-bottom:10px">${linha(ico("down",18),"Verificar atualização","Procura uma versão mais nova","chkupd")}</div><p class="meta">Seus sermões ficam guardados neste aparelho. Faça cópia de segurança de vez em quando, principalmente antes de limpar os dados do navegador.</p><p class="meta" style="margin-top:8px">Bíblias: ACF, KJV e BBE incluídas. Outras versões você adiciona do seu próprio arquivo.</p>`;
   $("mb").innerHTML=h+`<div class="bar" style="margin-top:14px"><button class="btn" data-a="fechar">Fechar</button></div>`;
@@ -2235,14 +2236,17 @@ function abrirSelSermao(){
 /* ---------- Bíblia própria (fica só neste aparelho) ---------- */
 function abrirAddBib(){
   const cs=db.cfg.custom||[];
-  $("mb").innerHTML=`<h3>Adicionar minha Bíblia</h3>
-  <p class="meta">Use o seu arquivo da NVI, ARA, NAA ou outra tradução. Ele é guardado só neste aparelho e não vai para a internet.</p>
-  <p class="meta" style="margin-top:8px">Formato aceito: arquivo <b>.json</b> com os 66 livros, cada um com a lista de capítulos e versículos (o formato comum "bible json", com <b>chapters</b>).</p>
+  const nv=c=>{const d=BIBS[c.k];return d?d.reduce((a,l)=>a+l.reduce((x,ch)=>x+ch.length,0),0):0;};
+  const dup=new Set();const vis={};cs.forEach(c=>{const n=c.n.toLowerCase();vis[n]=(vis[n]||0)+1;});Object.keys(vis).forEach(n=>{if(vis[n]>1)dup.add(n);});
+  const ruins=cs.filter(c=>!BIBS[c.k]||dup.has(c.n.toLowerCase())).length;
+  $("mb").innerHTML=`<h3>Minhas Bíblias</h3>
+  <p class="meta">Use o seu arquivo da NVI, ARA, NAA ou outra tradução. Ela fica guardada neste aparelho e também na sua conta, para aparecer nos outros aparelhos.</p>
+  <p class="meta" style="margin-top:8px">Formato aceito: arquivo <b>.json</b> com os 66 livros, cada um com a lista de capítulos e versículos (o formato comum "bible json", com <b>chapters</b>). Importar com um nome que já existe substitui a anterior.</p>
   <label class="f" for="bibn">Nome da versão</label><input class="in" id="bibn" placeholder="Ex.: NVI" maxlength="8" value="NVI">
-  <label class="btn gold" for="bibf" style="display:flex;align-items:center;justify-content:center;width:100%;margin:14px 0 6px">📂 Escolher arquivo .json</label>
+  <label class="drop" for="bibf" style="margin:14px 0 6px"><span class="ic">${ico("up",22)}</span><b>Escolher arquivo .json</b></label>
   <input type="file" id="bibf" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
-  ${cs.length?`<div class="gt">Suas versões</div>`+cs.map(c=>`<div class="hist"><span>${esc(c.n)}</span><button data-a="rmbib" data-v="${c.k}" aria-label="Remover">✕</button></div>`).join(""):""}
-  <div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
+  ${cs.length?`<div class="sech" style="margin:18px 2px 8px"><h3 style="font-size:15px">Suas versões</h3></div><div class="rows">${cs.map(c=>{const n=nv(c),ok=!!BIBS[c.k],d=dup.has(c.n.toLowerCase());return `<div class="rw st"><span class="rt2"><b>${esc(c.n)}</b><small style="color:${ok?"var(--muted)":"var(--red)"}">${ok?n.toLocaleString("pt-BR")+" versículos"+(d?" · repetida":""):"Sem texto neste aparelho. Não funciona."}</small></span><button class="btn danger" style="min-width:0;height:38px;padding:0 14px" data-a="rmbib" data-v="${c.k}">Excluir</button></div>`;}).join("")}</div>${ruins?`<button class="btn" style="width:100%;margin-top:10px" data-a="biblimpa">Limpar as quebradas e repetidas</button>`:""}`:""}
+  <div class="bar" style="margin-top:14px"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
 async function lerBibliaPropria(f){
@@ -2252,16 +2256,20 @@ async function lerBibliaPropria(f){
     const liv=d.map(b=>Array.isArray(b)?b:(b.chapters||b.chapter||null));
     if(liv.length!==66||liv.some(l=>!Array.isArray(l)||!l.length))throw 0;
     const norm2=liv.map(l=>l.map(c=>Array.isArray(c)?c.map(String):Object.values(c).map(String)));
-    const nome=(($("bibn")&&$("bibn").value)||"Minha").trim().slice(0,8)||"Minha",k="c"+uid();
-    await idbSet(k,norm2);BIBS[k]=norm2;
-    db.cfg.custom=(db.cfg.custom||[]).concat([{k,n:nome}]);db.cfg.versao=k;BN=null;salvar();
+    const nome=(($("bibn")&&$("bibn").value)||"Minha").trim().slice(0,8)||"Minha";
+    const ja=(db.cfg.custom||[]).find(c=>c.n.toLowerCase()===nome.toLowerCase()),k=ja?ja.k:"c"+uid();
+    await idbSet(k,norm2);BIBS[k]=norm2;BMISS.delete(k);
+    if(ja){const m=syncMeta();if(m.bib)delete m.bib[k];syncSave();}
+    else db.cfg.custom=(db.cfg.custom||[]).concat([{k,n:nome}]);
+    db.cfg.versao=k;BN=null;salvar();if(typeof bibSync==="function")setTimeout(bibSync,500);
     fechar();render();toast(nome+" adicionada ("+norm2.reduce((a,l)=>a+l.reduce((x,c)=>x+c.length,0),0).toLocaleString("pt-BR")+" versículos)",3000);
   }catch(e){toast("Arquivo não reconhecido. Precisa ter os 66 livros com capítulos.",3600);}
 }
 async function carregaPropriasBiblias(){
   const cs=(db.cfg.custom||[]);let alguma=false;
-  for(const c of cs){try{const d=await idbGet(c.k);if(d){BIBS[c.k]=d;alguma=true;}}catch(e){}}
-  if(alguma&&V.tela==="lista")render();
+  for(const c of cs){try{const d=await idbGet(c.k);if(d){BIBS[c.k]=d;BMISS.delete(c.k);alguma=true;}else BMISS.add(c.k);}catch(e){BMISS.add(c.k);}}
+  if(db.cfg.versao&&db.cfg.versao!=="acf"&&!VERS[db.cfg.versao]&&!BIBS[db.cfg.versao]){db.cfg.versao="acf";salvar();alguma=true;}
+  if(alguma||BMISS.size)render();
 }
 /* ---------- Novo sermão ---------- */
 const MODELOS={
@@ -2420,7 +2428,15 @@ document.addEventListener("click",e=>{
   else if(a==="nome")abrirNome();
   else if(a==="nomeok"){db.cfg.nome=$("nm").value.trim();salvar();fechar();render();}
   else if(a==="addbib")abrirAddBib();
-  else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];idbDel(k);bibApaga(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
+  else if(a==="biblimpa"){
+    const cs=db.cfg.custom||[],manter=new Map();
+    cs.slice().reverse().forEach(c=>{const n=c.n.toLowerCase();if(BIBS[c.k]&&!manter.has(n))manter.set(n,c.k);});
+    const sai=cs.filter(c=>manter.get(c.n.toLowerCase())!==c.k);
+    sai.forEach(c=>{delete BIBS[c.k];BMISS.delete(c.k);idbDel(c.k);bibApaga(c.k);});
+    db.cfg.custom=cs.filter(c=>!sai.includes(c));
+    if(db.cfg.versao&&db.cfg.versao!=="acf"&&!VERS[db.cfg.versao]&&!BIBS[db.cfg.versao])db.cfg.versao="acf";
+    salvar();BN=null;abrirAddBib();toast(sai.length+" removida"+(sai.length===1?"":"s"));}
+  else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];BMISS.delete(k);idbDel(k);bibApaga(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
   else if(a==="det"){V.det=!V.det;rerender();}
   else if(a==="voltar"||a==="ok"){if(a==="ok")toast("Salvo");salvar();V.tela="lista";V.apagar=null;render();}
   else if(a==="tempo"){const s=cur();s.min=+v;s.at=Date.now();salvar();rerender();}
@@ -2567,7 +2583,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="29";
+const VER="30";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
@@ -2701,11 +2717,12 @@ async function bibSync(){
     const snap=await col.get(),idx=[],partes={};
     snap.forEach(doc=>{const x=doc.data();if(doc.id.startsWith("idx_"))idx.push(x);else(partes[x.k]=partes[x.k]||[])[x.i]=x.d;});
     for(const x of idx){
-      if((db.cfg.custom||[]).some(c=>c.k===x.k))continue;
+      const tem=(db.cfg.custom||[]).some(c=>c.k===x.k);
+      if(tem&&BIBS[x.k])continue;
       const ps=partes[x.k]||[];if(ps.filter(Boolean).length<x.total)continue;
       const arr=ps.map(t=>JSON.parse(t));
-      await idbSet(x.k,arr);BIBS[x.k]=arr;
-      db.cfg.custom=(db.cfg.custom||[]).concat([{k:x.k,n:x.n}]);m.bib[x.k]=1;salvar();syncSave();
+      await idbSet(x.k,arr);BIBS[x.k]=arr;BMISS.delete(x.k);
+      if(!tem)db.cfg.custom=(db.cfg.custom||[]).concat([{k:x.k,n:x.n}]);m.bib[x.k]=1;salvar();syncSave();
       toast(x.n+" veio da sua conta",2600);refazSheet();
     }
   }catch(e){}
