@@ -1791,8 +1791,8 @@ function desenharPregar(){
   h+=`</div></div>`;
   if(bv)h+=`<button class="sheet" id="psh" data-a="psheet">${sheetIn(bv)}</button>`;
   h+=`<div class="prail"><small>TÓPICOS</small>${s.topicos.map((x,i)=>`<button class="${i===P.i?"on":""}" data-a="irt" data-v="${i}"><span class="num">${i+1}</span><span>${esc(x.titulo||"Sem título")}</span></button>`).join("")}</div>
-  <div class="pside"><button class="sa2" data-a="ant" ${P.i<=0?"disabled":""} aria-label="Tópico anterior">${ico("chev",26)}<small>Anterior</small></button><button class="sn2" data-a="prox" ${P.i>=n-1?"disabled":""} aria-label="Próximo tópico">${ico("chev",34)}<b>Próximo</b><small>${n?P.i+1+" de "+n:""}</small></button></div>
-  <div class="pnav"><button class="btn" data-a="ant" ${P.i<=0?"disabled style='opacity:.4'":""}>‹ Anterior</button><button class="btn gold" data-a="prox" ${P.i>=n-1?"disabled style='opacity:.4'":""}>Próximo ›</button></div>`;
+  <div class="pside"><button class="sa2" data-a="ant" ${P.i<=0?"disabled":""} aria-label="Tópico anterior">${ico("chev",26)}<small>Anterior</small></button>${P.i>=n-1?`<button class="sn2" data-a="sair" aria-label="Finalizar pregação"><span style="font-size:30px;line-height:1">✓</span><b>Finalizar</b><small>${n?n+" de "+n:""}</small></button>`:`<button class="sn2" data-a="prox" aria-label="Próximo tópico">${ico("chev",34)}<b>Próximo</b><small>${n?P.i+1+" de "+n:""}</small></button>`}</div>
+  <div class="pnav"><button class="btn" data-a="ant" ${P.i<=0?"disabled style='opacity:.4'":""}>‹ Anterior</button>${P.i>=n-1?`<button class="btn gold" data-a="sair">Finalizar ✓</button>`:`<button class="btn gold" data-a="prox">Próximo ›</button>`}</div>`;
   $("preach").innerHTML=h;
   $("preach").style.setProperty("--nf",db.cfg.fonte+"px");
   const c=document.querySelector(".pcont");if(c)c.scrollTop=st0;
