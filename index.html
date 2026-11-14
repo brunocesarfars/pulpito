@@ -980,7 +980,7 @@ let db={sermoes:[],semeado:false};
 try{const r=localStorage.getItem(LS);if(r)db=JSON.parse(r);}catch(e){}
 if(!db.semeado&&!db.sermoes.length){
   db.semeado=true;
-  db.sermoes.push({id:uid(),titulo:"A Fé em Meio à Tempestade",assunto:"Confiança em Deus nas crises da vida",pasta:"Exemplos",min:30,at:Date.now(),status:"pronto",base:"Marcos 4:35-41",
+  db.sermoes.push({id:uid(),ex:1,titulo:"A Fé em Meio à Tempestade",assunto:"Confiança em Deus nas crises da vida",pasta:"Exemplos",min:30,at:Date.now(),status:"pronto",base:"Marcos 4:35-41",
     topicos:[
       {id:uid(),titulo:"A Tempestade Chega para Todos",ref:"Marcos 4:37",blocos:[{id:uid(),tipo:"biblico",ref:"Marcos 4:37",t:""},{id:uid(),tipo:"texto",t:"Os discípulos estavam <b>obedecendo</b> quando a tempestade veio."}]},
       {id:uid(),titulo:"O Medo que Silencia a Fé",ref:"Marcos 4:40",blocos:[]},
@@ -991,16 +991,29 @@ if(!db.semeado&&!db.sermoes.length){
 function ajustar(){
   if(!db||!Array.isArray(db.sermoes))db={sermoes:[],semeado:true};
   db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
-  db.eventos=db.eventos||[];db.pastas=db.pastas||[];
-  db.sermoes.forEach(s=>{
+  db.eventos=(Array.isArray(db.eventos)?db.eventos:[]).filter(e=>e&&typeof e==="object");db.pastas=Array.isArray(db.pastas)?db.pastas:[];
+  db.sermoes=db.sermoes.filter(s=>s&&typeof s==="object");
+  db.lixeira=(Array.isArray(db.lixeira)?db.lixeira:[]).filter(x=>x&&x.id&&Date.now()-(x.delAt||0)<30*864e5);
+  db.sermoes.forEach(s=>{if(!s.id)s.id=uid();
     s.status=s.status||"rascunho";s.modo=s.modo==="rolagem"?"rolagem":"topicos";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
-    s.topicos.forEach(t=>{if(!t.blocos){t.blocos=blocosDeNotas(t.notas);delete t.notas;}t.ref=t.ref||"";});
+    s.topicos=(Array.isArray(s.topicos)?s.topicos:[]).filter(t=>t&&typeof t==="object");
+    s.topicos.forEach(t=>{
+      if(!t.id)t.id=uid();
+      if(!Array.isArray(t.blocos)){t.blocos=t.notas?blocosDeNotas(t.notas):[];delete t.notas;}
+      t.ref=typeof t.ref==="string"?t.ref:"";
+      t.blocos=t.blocos.filter(b=>b&&typeof b==="object");
+      t.blocos.forEach(b=>{if(!b.id)b.id=uid();if(!TIPOS[b.tipo])b.tipo="texto";if(typeof b.t!=="string")b.t=b.t==null?"":String(b.t);if(b.tipo==="biblico"&&typeof b.ref!=="string")b.ref="";});
+    });
   });
 }
 ajustar();aplicaTema();
 try{matchMedia("(prefers-color-scheme: light)").addEventListener("change",aplicaTema);}catch(e){}
 let saveT;
 function salvar(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}if(typeof syncTouch==="function")syncTouch();},250);}
+function salvarJa(){clearTimeout(saveT);try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}if(typeof syncTouch==="function"){try{syncTouch();}catch(e){}}}
+addEventListener("pagehide",salvarJa);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)salvarJa();});
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 function toast(t,ms){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),ms||1800);}
 const sermao=id=>db.sermoes.find(s=>s.id===id);
 const livrosDo=s=>{const set=new Set();s.topicos.forEach(t=>{const l=livroDe(t.ref);if(l)set.add(l);});const b=livroDe(s.base);if(b)set.add(b);return LIVROS.filter(l=>set.has(l));};
@@ -1025,6 +1038,7 @@ const IC={
  bell:'<path d="M6 17V11a6 6 0 1112 0v6l2 2H4z"/><path d="M10 21h4"/>',
  timer:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 2.5h5"/>',
  type:'<path d="M4 6V4h16v2M9 20h6M12 4v16"/>',
+ trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
  cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>',
  cross:'<path d="M12 3v18M6 9h12"/>',
@@ -1192,6 +1206,7 @@ function renderMais(){
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
   ${tile("biblia","book","Bíblia",(versList()[ver]||VERS.acf).n)}
   ${tile("preg","timer","Pregação","Sinal, tempo e letra")}
+  ${tile("lixeira","trash","Lixeira",(db.lixeira||[]).length?(db.lixeira.length+" sermão(ões) · 30 dias"):"Sermões excluídos")}
   ${tile("sobre","info","Sobre","Púlpito")}
   </div>${nav()}`;
 }
@@ -1200,6 +1215,7 @@ function abrirSheet(k){
   SHEET=k;const c=db.cfg,ver=c.versao||"acf";let h="";
   if(k==="dados")h=`<h3>Cópia de segurança</h3><p class="meta" style="margin-bottom:12px">${ultBk()}. O arquivo guarda todos os seus sermões e a agenda.</p><div class="rows">${linha(ico("down",18),"Baixar cópia","Salva um arquivo no aparelho","baixar")}${linha(ico("up",18),"Restaurar cópia","De um arquivo salvo","restaurar")}</div>`;
   else if(k==="conta"){h=contaSheet();if(!SY.ready)fbCarrega().catch(()=>{});}
+  else if(k==="lixeira"){const L=db.lixeira||[];h=`<h3>Lixeira</h3><p class="meta" style="margin-bottom:12px">Sermões excluídos ficam aqui por 30 dias.</p>`+(L.length?`<div class="rows">${L.map(x=>linha(ico("up",18),esc(x.titulo||"Sem título"),"Excluído "+new Date(x.delAt).toLocaleDateString("pt-BR")+" · toque para restaurar","lixrest",x.id)).join("")}</div><div class="bar" style="margin-top:10px"><button class="btn danger" data-a="lixvazia">Esvaziar lixeira</button></div>`:`<p class="meta">Nada por aqui.</p>`);}
   else if(k==="tema")h=`<h3>Aparência</h3>${segV([["auto","Automático"],["claro","Claro"],["escuro","Escuro"]],c.tema,"tema")}<p class="meta">Automático segue o tema do celular.</p>`;
   else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Adicionar minha Bíblia","NVI, ARA ou NAA do seu arquivo","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
   else if(k==="preg")h=`<h3>Pregação</h3><div class="rows">${linha(ico("bell",18),"Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha(ico("timer",18),"Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha(ico("type",18),"Letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>`;
@@ -1393,17 +1409,47 @@ function blocosTexto(txt){
 }
 async function lerDOCX(buf){
   await carregar("mammoth");
-  const r=await mammoth.convertToHtml({arrayBuffer:buf});
+  const opt={};
+  try{
+    opt.transformDocument=mammoth.transforms.paragraph(p=>{
+      const ind=p.indent||{},st=parseInt(ind.start||ind.left||0,10)||0;
+      return st>=360?Object.assign({},p,{styleName:"PulpitoRec"}):p;
+    });
+    opt.styleMap=["p[style-name='PulpitoRec'] => p.rec:fresh"];
+  }catch(e){}
+  const r=await mammoth.convertToHtml({arrayBuffer:buf},opt);
   const d=new DOMParser().parseFromString(r.value,"text/html"),bl=[];
   const lim=x=>(x||"").replace(/\s+/g," ").trim();
+  /* html inline -> marcadores de negrito/itálico (E000/E001 e E002/E003) */
+  const marca=(n,b,i)=>{
+    let m="";
+    n.childNodes.forEach(c=>{
+      if(c.nodeType===3){let tx=c.textContent.replace(/\s+/g," ");if(!tx.trim()){m+=tx;return;}const lead=tx.match(/^\s*/)[0],trail=tx.match(/\s*$/)[0],core=tx.trim();let o=lead;if(b)o+="\uE000";if(i)o+="\uE002";o+=core;if(i)o+="\uE003";if(b)o+="\uE001";m+=o+trail;}
+      else if(c.nodeType===1){
+        const tg=c.nodeName.toLowerCase();
+        if(tg==="br")m+="\n";
+        else m+=marca(c,b||/^(strong|b)$/.test(tg),i||/^(em|i)$/.test(tg));
+      }
+    });
+    return m;
+  };
+  const limpaM=m=>m.replace(/\uE001(\s*)\uE000/g,"$1").replace(/\uE003(\s*)\uE002/g,"$1").replace(/[ \t]+/g," ").trim();
+  const semM=m=>m.replace(/[\uE000-\uE004]/g,"");
+  const para=(n,rec)=>{
+    marca(n,false,false).split(/\n+/).forEach(seg=>{
+      const m=limpaM(seg),t=lim(semM(m));
+      if(!t)return;
+      const forte=m.charAt(0)==="\uE000"&&m.lastIndexOf("\uE001")===m.length-1&&m.indexOf("\uE001")===m.length-1;
+      if(forte&&t.length<100&&!rec&&!/[,;]$/.test(t))bl.push({k:"h",t});
+      else bl.push({k:"p",t,m:(rec?"\uE004":"")+m,rec:!!rec});
+    });
+  };
   d.body.childNodes.forEach(n=>{
     const tag=(n.nodeName||"").toLowerCase(),tx=lim(n.textContent);
     if(!tx)return;
     if(/^h[1-6]$/.test(tag))bl.push({k:"h",t:tx});
-    else if(tag==="p"){
-      const forte=[...n.childNodes].every(c=>/^(strong|b)$/i.test(c.nodeName)||!lim(c.textContent));
-      bl.push({k:forte&&tx.length<100?"h":"p",t:tx});
-    }else if(tag==="ul"||tag==="ol")n.querySelectorAll("li").forEach(li=>bl.push({k:"p",t:"• "+lim(li.textContent)}));
+    else if(tag==="p")para(n,/\brec\b/.test(n.className||""));
+    else if(tag==="ul"||tag==="ol")n.querySelectorAll("li").forEach(li=>{const m=limpaM(marca(li,false,false).replace(/\n+/g," "));bl.push({k:"p",t:"• "+lim(semM(m)),m:"• "+m,rec:false});});
     else if(tag==="table")n.querySelectorAll("tr").forEach(tr=>bl.push({k:"p",t:[...tr.children].map(c=>lim(c.textContent)).join(" | ")}));
     else bl.push({k:"p",t:tx});
   });
@@ -2037,7 +2083,7 @@ document.addEventListener("click",e=>{
   else if(a==="sobe")mover(cur().topicos,v,-1);
   else if(a==="desce")mover(cur().topicos,v,1);
   else if(a==="delt"){const s=cur(),t=achaT(b);s.topicos=s.topicos.filter(x=>x.id!==t.id);salvar();rerender();}
-  else if(a==="del"){if(V.apagar===V.id){db.sermoes=db.sermoes.filter(x=>x.id!==V.id);db.eventos.forEach(e=>{if(e.msgId===V.id)e.msgId="";});salvar();V.tela="lista";V.apagar=null;render();toast("Mensagem excluída");}else{V.apagar=V.id;rerender();}}
+  else if(a==="del"){if(V.apagar===V.id){const sd=sermao(V.id);if(sd&&!sd.ex)paraLixeira(sd);db.sermoes=db.sermoes.filter(x=>x.id!==V.id);db.eventos.forEach(e=>{if(e.msgId===V.id)e.msgId="";});salvar();V.tela="lista";V.apagar=null;render();toast("Mensagem excluída");}else{V.apagar=V.id;rerender();}}
   else if(a==="dup"){const s=cur(),c=JSON.parse(JSON.stringify(s));c.id=uid();c.titulo=(s.titulo||"Sem título")+" (cópia)";c.status="rascunho";c.hist=[];c.fav=false;c.at=Date.now();c.topicos.forEach(t=>{t.id=uid();t.blocos.forEach(x=>x.id=uid());});db.sermoes.push(c);salvar();V.id=c.id;V.ab=new Set();render();scrollTo(0,0);toast("Mensagem duplicada");}
   else if(a==="txt")mostrarTexto("Mensagem em texto",textoDe(cur()));
   else if(a==="regis")abrirRegistro(V.id,0);
@@ -2059,6 +2105,8 @@ document.addEventListener("click",e=>{
   else if(a==="fmais"||a==="fmenos"||a==="f2mais"||a==="f2menos"){db.cfg.fonte=Math.min(34,Math.max(14,db.cfg.fonte+(/mais/.test(a)?2:-2)));salvar();if(P){$("preach").style.setProperty("--nf",db.cfg.fonte+"px");abrirAjustes();}else refazSheet();}
   else if(a==="som"||a==="som2"){db.cfg.som=!db.cfg.som;salvar();if(P)abrirAjustes();else refazSheet();}
   else if(a==="modo"||a==="modo2"){db.cfg.modo=db.cfg.modo==="regressivo"?"crescente":"regressivo";salvar();if(P){abrirAjustes();atualizar();}else refazSheet();}
+  else if(a==="lixrest"){const L=db.lixeira||[],o=L.find(x=>x.id===v);if(o){db.lixeira=L.filter(x=>x.id!==v);const c=Object.assign({},o);delete c.delAt;if(!db.sermoes.some(x=>x.id===c.id))db.sermoes.push(c);const m=syncMeta();delete m.tomb[c.id];delete m.h[c.id];c.u=Date.now();ajustar();salvar();toast("Sermão restaurado");refazSheet();}}
+  else if(a==="lixvazia"){if(confirm("Apagar de vez todos os sermões da lixeira?")){db.lixeira=[];salvar();refazSheet();}}
   else if(a==="login")entrarGoogle();
   else if(a==="logout")sairConta();
   else if(a==="syncnow"){syncTouch();syncPush();bibSync();toast("Sincronizando…");}
@@ -2144,9 +2192,10 @@ function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
 const hsh=o=>{const r=Object.assign({},o);delete r.u;const t=JSON.stringify(r);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
 const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr};};
+function paraLixeira(o){db.lixeira=(db.lixeira||[]).filter(x=>x.id!==o.id);db.lixeira.unshift(Object.assign(JSON.parse(JSON.stringify(o)),{delAt:Date.now()}));db.lixeira=db.lixeira.slice(0,40);}
 function syncTouch(){
   const m=syncMeta(),now=Date.now(),vistos=new Set();
-  const itens=[...db.sermoes.map(x=>["s",x]),...db.eventos.map(x=>["e",x])];
+  const itens=[...db.sermoes.filter(x=>!x.ex).map(x=>["s",x]),...db.eventos.map(x=>["e",x])];
   itens.forEach(([k,o])=>{
     vistos.add(o.id);const h=hsh(o);
     if(o.u===undefined){o.u=k==="s"?(o.at||1):1;m.h[o.id]=h;}
@@ -2172,6 +2221,7 @@ function syncApply(){
     if(r.del){
       if(loc&&r.u>=loc.u){
         if(syncEmUso(id)){rest.push(r);return;}
+        if(db.sermoes.includes(loc)&&!loc.ex)paraLixeira(loc);
         db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);delete m.h[id];mud=true;
       }
       m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);return;
@@ -2202,7 +2252,7 @@ async function syncPush(){
   if(!navigator.onLine){SY.estado="off";SY.msg="Sem internet. Envio quando voltar.";refazConta();return;}
   const m=syncMeta(),col=SY.fs.collection("users").doc(SY.user.uid).collection("itens"),ops=[];
   const add=(id,u,data)=>{if((m.p[id]===undefined?-1:m.p[id])>=u)return;ops.push({id,u,data});};
-  db.sermoes.forEach(o=>add(o.id,o.u,{k:"s",u:o.u,d:JSON.stringify(o)}));
+  db.sermoes.forEach(o=>{if(!o.ex)add(o.id,o.u,{k:"s",u:o.u,d:JSON.stringify(o)});});
   db.eventos.forEach(o=>add(o.id,o.u,{k:"e",u:o.u,d:JSON.stringify(o)}));
   Object.keys(m.tomb).forEach(id=>add(id,m.tomb[id],{del:true,u:m.tomb[id]}));
   add("_cfg",m.cu,{k:"c",u:m.cu,d:JSON.stringify(cfgSync())});
