@@ -548,6 +548,19 @@ nav.nav button:active i{transform:scale(.94)}
 .iaacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .iaacts button{padding:12px 8px;border-radius:14px;background:var(--card2);border:1px solid var(--line);font-weight:600;font-size:14px}
 .iares{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--gold-soft);border:1px solid var(--gold-line);line-height:1.55;max-height:240px;overflow:auto}
+.lk{color:var(--gold);font-weight:600;text-decoration:underline}
+body.tela-ia .app{padding-bottom:calc(var(--navh) + 96px + env(safe-area-inset-bottom))}
+body.tela-ia .iaform{bottom:calc(var(--navh) - 4px + env(safe-area-inset-bottom))}
+body.ia-kb nav.nav{display:none}
+body.ia-kb .iaform{bottom:calc(12px + env(safe-area-inset-bottom))}
+button.iactx{width:100%;text-align:left}
+.iactx b{flex:1;min-width:0;font-weight:500;color:var(--text);font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iactx .dn{display:grid;transform:rotate(90deg);color:var(--muted)}
+.iapl{max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.iap{display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.iap b{font-size:14.5px;font-weight:600;color:var(--text)}
+.iap small{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iap.on{border-color:var(--gold);background:var(--gold-soft)}
 </style>
 </head>
 <body>
@@ -1216,12 +1229,13 @@ const ico=(n,sz)=>`<svg class="svg" viewBox="0 0 24 24" width="${sz||22}" height
 /* ---------- Telas ---------- */
 let V={sel:new Set(),grupo:(db.cfg&&db.cfg.agr)||"todos",det:false,bk:null,ch:null,at:"todos",bq:"",alvo:0,tela:"lista",tab:"inicio",filtro:"todas",pasta:"",q:"",id:null,apagar:null,ab:new Set(),mes:[new Date().getFullYear(),new Date().getMonth()]};
 function nav(){
-  const it=[["inicio",ico("home"),"Início"],["msgs",ico("list"),"Mensagens"],["biblia",ico("book"),"Bíblia"],["agenda",ico("cal"),"Agenda"],["mais",ico("more"),"Mais"]];
-  return `<nav class="nav"><div>${it.map(([k,i,n])=>`<button class="${V.tab===k?"on":""}" data-a="tab" data-v="${k}" aria-label="${n}"><i>${i}</i>${n}</button>`).join("")}</div></nav>`;
+  const it=[["inicio",ico("home"),"Início"],["msgs",ico("list"),"Mensagens"],["biblia",ico("book"),"Bíblia"],["agenda",ico("cal"),"Agenda"],["ia",ico("spark"),"IA"],["mais",ico("more"),"Mais"]];
+  const on=V.tela==="ia"?"ia":V.tab;
+  return `<nav class="nav"><div>${it.map(([k,i,n])=>`<button class="${on===k?"on":""}" ${k==="ia"?`data-a="iaabrir"`:`data-a="tab" data-v="${k}"`} aria-label="${n}"><i>${i}</i>${n}</button>`).join("")}</div></nav>`;
 }
 function render(){
   setTimeout(selbar,0);
-  document.body.classList.toggle("sem-nav",V.tela==="edit"||V.tela==="ia");
+  document.body.classList.toggle("sem-nav",V.tela==="edit");document.body.classList.toggle("tela-ia",V.tela==="ia");
   if(V.tela==="edit")return renderEdit();
   if(V.tela==="ilus")return renderIlus();
   if(V.tela==="ia")return renderIA();
@@ -1384,7 +1398,7 @@ function renderMais(){
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
   ${tile("biblia","book","Bíblia",(versList()[ver]||VERS.acf).n)}
   ${tile("preg","timer","Pregação","Sinal, tempo e letra")}
-  ${tile("ia","spark","Assistente de IA",iaCfg().k?"Com a sua chave neste aparelho":"Dúvidas, correção e ideias","iaabrir")}
+  ${tile("ia","spark","Assistente de IA",iaCfg().k?"Com a sua chave neste aparelho":"Use o app da sua IA, sem custo extra","iaabrir")}
   ${tile("ilus","bulb","Ilustrações",(db.ilus||[]).length?(db.ilus.length+" guardadas"):"Histórias e citações","ilusabrir")}
   ${tile("mapa","book","Livros e capítulos","Resumo do que você já usou")}
   ${tile("lixeira","trash","Lixeira",(db.lixeira||[]).length?(db.lixeira.length+" sermão(ões) · 30 dias"):"Sermões excluídos")}
@@ -1878,8 +1892,8 @@ function abrirImportar(){
 
 
 /* ---------- Assistente de IA (chave de cada aparelho) ---------- */
-let IA={msgs:[],ctx:true,busy:false,cfg:null,sid:"",res:"",blk:null,setup:false};
-const IAP={claude:{n:"Claude",m:"claude-sonnet-5-5",l:"console.anthropic.com → API keys"},gemini:{n:"Gemini",m:"gemini-flash-latest",l:"aistudio.google.com/apikey"},openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys"}};
+let IA={msgs:[],ctx:false,busy:false,cfg:null,sid:"",res:"",blk:null,setup:false};
+const IAP={claude:{n:"Claude",m:"claude-sonnet-5-5",l:"console.anthropic.com → API keys"},gemini:{n:"Gemini",m:"gemini-3.5-flash-lite",l:"aistudio.google.com/apikey"},openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys"}};
 function iaCfg(){if(!IA.cfg){try{IA.cfg=JSON.parse(localStorage.getItem("pulpito.ia")||"{}");}catch(e){IA.cfg={};}}return IA.cfg;}
 function iaSave(){try{localStorage.setItem("pulpito.ia",JSON.stringify(IA.cfg));}catch(e){}}
 async function iaChamar(msgs,sys){
@@ -1889,7 +1903,7 @@ async function iaChamar(msgs,sys){
     if(p==="claude")r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:m,max_tokens:1800,system:sys,messages:mm})});
     else if(p==="gemini")r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(m)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:mm.map(x=>({role:x.role==="user"?"user":"model",parts:[{text:x.content}]}))})});
     else r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+k},body:JSON.stringify({model:m,messages:[{role:"system",content:sys},...mm]})});
-  }catch(e){throw new Error("Sem conexão com a IA. Confira a internet.");}
+  }catch(e){throw new Error("Não consegui falar com a IA ("+((e&&e.message)||"sem rede")+"). Confira a internet e tente de novo.");}
   try{j=await r.json();}catch(e){}
   if(!r.ok){const c0=r.status,em=j&&j.error&&(j.error.message||j.error);throw new Error(c0===401||c0===403?"Chave recusada. Confira se foi copiada inteira.":c0===429?"Limite de uso atingido. Tente de novo em instantes.":em?String(em).slice(0,160):"Erro "+c0);}
   const t=p==="claude"?(j.content||[]).map(x=>x.text||"").join(""):p==="gemini"?((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(x=>x.text||"").join(""):((((j.choices||[])[0]||{}).message||{}).content||"");
@@ -1907,21 +1921,61 @@ function iaSystem(){
   return t;
 }
 const iaHtml=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
+function iaCtxBtn(){
+  const sm=IA.ctx&&sermao(IA.sid);
+  return `<button class="iactx" data-a="iapick" aria-label="Escolher sermão de contexto"><span>${ico("book",15)}</span><b>${sm?esc(sm.titulo||"Sem título"):"Conversa livre (sem sermão)"}</b><span class="dn">${ico("chev",15)}</span></button>`;
+}
+function iaPickLista(q){
+  const box=$("ia-lst");if(!box)return;
+  const n=norm((q||"").trim()),rec=db.sermoes.slice().sort((a,b)=>Math.max(b.aberto||0,b.at||0)-Math.max(a.aberto||0,a.at||0));
+  const ach=n?rec.filter(x=>norm((x.titulo||"")+" "+(x.base||"")+" "+(x.serie||"")).includes(n)):rec;
+  const mostra=ach.slice(0,40);
+  let h=n?"":`<button class="iap ${!IA.ctx?"on":""}" data-a="iaesc" data-v=""><b>Conversa livre</b><small>Sem sermão de contexto</small></button>`;
+  h+=mostra.map(x=>`<button class="iap ${IA.ctx&&IA.sid===x.id?"on":""}" data-a="iaesc" data-v="${x.id}"><b>${esc(x.titulo||"Sem título")}</b><small>${esc([x.base,x.serie].filter(Boolean).join(" · ")||stNome(x.status))}</small></button>`).join("");
+  if(!mostra.length)h+=`<p class="meta" style="padding:14px 4px">Nenhum sermão encontrado.</p>`;
+  else if(ach.length>mostra.length)h+=`<p class="meta" style="padding:10px 4px">Mostrando ${mostra.length} de ${ach.length}. Digite mais para filtrar.</p>`;
+  box.innerHTML=h;
+}
+function iaAbrirPick(){
+  $("mb").innerHTML=`<h3>Sermão de contexto</h3><label class="sbox">${ico("search",20)}<input id="ia-bq" type="search" autocomplete="off" placeholder="Buscar por título, texto base ou série"></label><div id="ia-lst" class="iapl"></div><div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
+  $("modal").classList.add("show");iaPickLista("");
+}
+async function iaParaApp(pergunta){
+  const txt=iaSystem()+"\n\n---\n"+pergunta;
+  try{if(navigator.share){await navigator.share({text:txt});return;}}catch(e){if(e&&e.name==="AbortError")return;}
+  copiar(txt);toast("Pedido copiado. Cole no app da sua IA.",3200);
+}
+function iaUsaResultado(){
+  const s0=cur(),t=s0&&IA.blk&&s0.topicos.find(x=>x.id===IA.blk.tid),bl=t&&t.blocos.find(x=>x.id===IA.blk.bid);if(!bl||!IA.res)return;
+  if(IA.mode==="aplicar")t.blocos.splice(t.blocos.indexOf(bl)+1,0,{id:uid(),tipo:"texto",t:iaHtml(IA.res)});else bl.t=iaHtml(IA.res);
+  s0.at=Date.now();salvar();fechar();rerender();toast(IA.mode==="aplicar"?"Aplicação adicionada":"Texto substituído");
+}
 function iaIdPadrao(){return (V.tela==="ia"&&IA.sid&&sermao(IA.sid))?IA.sid:(V.id&&sermao(V.id)?V.id:(db.sermoes.slice().sort((a,b)=>Math.max(b.aberto,b.at)-Math.max(a.aberto,a.at))[0]||{}).id||"");}
 function renderIA(){
   const c=iaCfg(),pv=IAP[c.p]?c.p:"claude";
   let h=`<div class="top"><button class="ib" data-a="iafecha" aria-label="Voltar">←</button><h1>Assistente</h1><button class="ib" data-a="iaconf" aria-label="Configurar">${ico("more",20)}</button></div>`;
+  if(!c.k&&!IA.setup){
+    if(!sermao(IA.sid)){IA.sid="";IA.ctx=false;}
+    const q=[["Explicar o texto base","Explique o texto base deste sermão: contexto histórico, contexto literário e a ideia central."],["Sugerir ilustrações","Sugira 3 ilustrações curtas e fiéis ao texto para este sermão."],["Aplicações práticas","Sugira aplicações práticas para a vida do ouvinte a partir deste sermão."],["Revisar o sermão","Leia o sermão e aponte pontos fortes, lacunas e trechos confusos, com sugestões objetivas."]];
+    h+=`<p class="sd2">Sem chave e sem custo extra: o Púlpito monta o pedido com o seu sermão e abre o app da sua IA (Claude, ChatGPT, Gemini…), usando a sua própria assinatura.</p>
+    ${iaCtxBtn()}
+    <div class="iaq">${q.map(([a,b])=>`<button data-a="iaapp" data-v="${esc(b)}">${a}</button>`).join("")}</div>
+    <label class="f">Ou escreva o seu pedido</label><textarea class="in" id="ia-t2" style="min-height:90px" placeholder="Ex.: Me ajude a abrir este sermão com uma pergunta forte"></textarea>
+    <div class="bar" style="margin-top:12px"><button class="btn gold" data-a="iaapp2">Enviar para o app da minha IA</button></div>
+    <p class="meta" style="margin-top:14px">No celular abre a lista de apps: escolha o Claude. A resposta você copia de lá e cola de volta no sermão. Prefere respostas dentro do Púlpito? <button class="lk" data-a="iaconf">Use uma chave de API</button>.</p>`;
+    $("app").innerHTML=h+nav();return;
+  }
   if(!c.k||IA.setup){
     h+=`<p class="sd2">Use a sua própria IA. A chave fica só neste aparelho e não é sincronizada nem entra na cópia de segurança.</p>
     <div class="card"><h3>Qual IA você usa?</h3><div class="seg eq">${Object.keys(IAP).map(k=>`<button class="${pv===k?"on":""}" data-a="iaprov" data-v="${k}">${IAP[k].n}</button>`).join("")}</div>
     <label class="f">Chave de acesso (API key)</label><input class="in" id="ia-k" type="password" autocomplete="off" placeholder="Cole a chave aqui" value="${esc(c.k||"")}">
     <p class="meta" style="margin-top:6px">Como obter: ${IAP[pv].l}. O uso é cobrado na conta de quem criou a chave.</p>
     <label class="f">Modelo (opcional)</label><input class="in" id="ia-m" placeholder="${IAP[pv].m}" value="${esc(c.m||"")}">
-    <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="iasalva">Salvar e começar</button>${c.k?`<button class="btn danger" data-a="iatira">Remover chave</button>`:""}</div></div>`;
-    $("app").innerHTML=h;return;
+    <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="iasalva">Salvar e começar</button>${c.k?"":`<button class="btn" data-a="iaconf">Voltar</button>`}${c.k?`<button class="btn danger" data-a="iatira">Remover chave</button>`:""}</div></div>`;
+    $("app").innerHTML=h+nav();return;
   }
-  IA.sid=IA.sid&&sermao(IA.sid)?IA.sid:iaIdPadrao();
-  h+=`<div class="iactx"><span>${ico("book",15)}</span><select id="ia-s" aria-label="Sermão de contexto"><option value="">Sem sermão (conversa livre)</option>${db.sermoes.map(x=>`<option value="${x.id}" ${IA.ctx&&IA.sid===x.id?"selected":""}>${esc(x.titulo||"Sem título")}</option>`).join("")}</select></div>`;
+  if(!sermao(IA.sid)){IA.sid="";IA.ctx=false;}
+  h+=`${iaCtxBtn()}`;
   if(!IA.msgs.length){
     const q=[["Explicar o texto base","Explique o texto base deste sermão: contexto histórico, contexto literário e a ideia central."],["Sugerir ilustrações","Sugira 3 ilustrações curtas e fiéis ao texto para este sermão."],["Aplicações práticas","Sugira aplicações práticas para a vida do ouvinte a partir deste sermão."],["Revisar o sermão","Leia o sermão e aponte pontos fortes, lacunas e trechos confusos, com sugestões objetivas."]];
     h+=`<div class="vazio">${ico("spark",34)}<b>Como posso ajudar?</b><p>Tire dúvidas de contexto, peça ideias ou revisão. Se escolher um sermão acima, eu leio ele antes de responder.</p></div><div class="iaq">${q.map(([a,b])=>`<button data-a="iaq" data-v="${esc(b)}">${a}</button>`).join("")}</div>`;
@@ -1929,7 +1983,7 @@ function renderIA(){
     h+=`<div class="iam">${IA.msgs.map((m,i)=>`<div class="ib2 ${m.r}">${m.r==="a"&&m.e?`<span class="err">${esc(m.t)}</span>`:iaHtml(m.t)}${m.r==="a"&&!m.e?`<div class="iaac"><button data-a="iacopy" data-v="${i}">Copiar</button><button data-a="iaguarda" data-v="${i}">Guardar nas ilustrações</button></div>`:""}</div>`).join("")}${IA.busy?`<div class="ib2 a pens"><i></i><i></i><i></i></div>`:""}</div><button class="iaclr" data-a="ianova">Nova conversa</button>`;
   }
   h+=`<div class="iaform"><textarea id="ia-t" rows="1" placeholder="Pergunte algo…"></textarea><button data-a="iasend" aria-label="Enviar" ${IA.busy?"disabled":""}>${ico("arrow",20)}</button></div>`;
-  $("app").innerHTML=h;
+  $("app").innerHTML=h+nav();
   if(IA.msgs.length)setTimeout(()=>scrollTo(0,document.body.scrollHeight),30);
 }
 async function iaEnviar(txt){
@@ -1945,7 +1999,7 @@ function abrirIABloco(tid,bid){
   const tx=b.tipo==="texto"?plain(b.t):(b.t||"");
   $("mb").innerHTML=`<h3>Assistente neste texto</h3>
   <div class="iaprev">${esc(tx.slice(0,400))}${tx.length>400?"…":""}</div>
-  ${iaCfg().k?`<div class="iaacts"><button data-a="iafaz" data-v="corrigir">Corrigir</button><button data-a="iafaz" data-v="melhorar">Melhorar clareza</button><button data-a="iafaz" data-v="encurtar">Encurtar</button><button data-a="iafaz" data-v="aplicar">Dar aplicação</button></div><div id="ia-res"></div>`:`<p class="meta">Configure o assistente primeiro, em Mais → Assistente de IA.</p><div class="bar"><button class="btn gold" data-a="iaabrir2">Configurar agora</button></div>`}
+  <div class="iaacts"><button data-a="iafaz" data-v="corrigir">Corrigir</button><button data-a="iafaz" data-v="melhorar">Melhorar clareza</button><button data-a="iafaz" data-v="encurtar">Encurtar</button><button data-a="iafaz" data-v="aplicar">Dar aplicação</button></div>${iaCfg().k?"":`<p class="meta" style="margin-top:10px">Sem chave: o pedido abre o app da sua IA. Depois cole a resposta abaixo para usar no sermão.</p><textarea class="in" id="ia-cola" style="min-height:90px;margin-top:6px" placeholder="Cole aqui a resposta da IA"></textarea><div class="bar" style="margin-top:8px"><button class="btn gold" data-a="iacolou">Usar resposta</button></div>`}<div id="ia-res"></div>
   <div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
@@ -2343,7 +2397,9 @@ document.addEventListener("click",e=>{
   else if(a==="grupo"){V.grupo=v;db.cfg.agr=v;salvar();fechar();renderMsgs();}
   else if(a==="agrupar")abrirAgrupar();
   else if(a==="filtro"){V.filtro=v;renderMsgs();}
-  else if(a==="iaabrir"){V.tela="ia";IA.setup=false;IA.sid=iaIdPadrao();render();scrollTo(0,0);}
+  else if(a==="iaabrir"){if(V.tela==="ia"&&!IA.setup)return;V.tela="ia";IA.setup=false;if(!IA.msgs.length){IA.sid="";IA.ctx=false;}render();scrollTo(0,0);}
+  else if(a==="iapick"){iaAbrirPick();}
+  else if(a==="iaesc"){IA.sid=v||"";IA.ctx=!!v;fechar();renderIA();}
   else if(a==="iaabrir2"){fechar();V.tela="lista";V.tab="mais";IA.setup=true;V.tela="ia";render();}
   else if(a==="iafecha"){V.tela=V.id&&V.voltaEdit?"edit":"lista";V.tab="mais";IA.setup=false;render();scrollTo(0,0);}
   else if(a==="iaconf"){IA.setup=!IA.setup;renderIA();}
@@ -2351,6 +2407,8 @@ document.addEventListener("click",e=>{
   else if(a==="iasalva"){const k=($("ia-k").value||"").trim();if(!k){toast("Cole a chave de acesso");return;}iaCfg().k=k;IA.cfg.m=($("ia-m").value||"").trim();if(!IAP[IA.cfg.p])IA.cfg.p="claude";iaSave();IA.setup=false;toast("Assistente pronto");renderIA();}
   else if(a==="iatira"){if(confirm("Remover a chave deste aparelho?")){IA.cfg={};iaSave();IA.setup=false;IA.msgs=[];renderIA();}}
   else if(a==="iaq"){iaEnviar(v);}
+  else if(a==="iaapp"){iaParaApp(v);}
+  else if(a==="iaapp2"){const t=($("ia-t2").value||"").trim();if(!t){toast("Escreva o pedido primeiro");return;}iaParaApp(t);}
   else if(a==="iasend"){const e=$("ia-t");const t=e&&e.value;if(e)e.value="";iaEnviar(t);}
   else if(a==="ianova"){IA.msgs=[];renderIA();}
   else if(a==="iacopy"){const m=IA.msgs[+v];if(m)copiar(m.t);}
@@ -2360,13 +2418,14 @@ document.addEventListener("click",e=>{
     const t=cur().topicos.find(x=>x.id===IA.blk.tid),bl=t&&t.blocos.find(x=>x.id===IA.blk.bid);if(!bl)return;
     const tx=bl.tipo==="texto"?plain(bl.t):(bl.t||"");
     const P={corrigir:"Corrija apenas ortografia, gramática e pontuação do texto abaixo, sem mudar o sentido nem o estilo. Devolva somente o texto corrigido.",melhorar:"Reescreva o texto abaixo com mais clareza e fluidez, mantendo o sentido, o tom e a voz do pregador. Devolva somente o texto.",encurtar:"Reduza o texto abaixo para cerca de metade, mantendo as ideias principais. Devolva somente o texto.",aplicar:"Escreva 2 ou 3 aplicações práticas curtas para o ouvinte, a partir do texto abaixo. Devolva somente as aplicações."}[v];
+    IA.mode=v;
+    if(!iaCfg().k){iaParaApp(P+"\n\n"+tx);return;}
     const box=$("ia-res");box.innerHTML=`<p class="meta" style="margin:12px 0">Pensando…</p>`;
     iaChamar([{r:"u",t:P+"\n\n"+tx}],iaSystem()).then(r=>{IA.res=r;box.innerHTML=`<div class="iares">${iaHtml(r)}</div><div class="bar" style="margin-top:8px"><button class="btn gold" data-a="iausa">${v==="aplicar"?"Adicionar ao tópico":"Substituir texto"}</button><button class="btn" data-a="iacopy2">Copiar</button></div>`;IA.mode=v;}).catch(e=>{box.innerHTML=`<p class="meta" style="margin:12px 0;color:var(--red)">${esc(e.message)}</p>`;});
   }
+  else if(a==="iacolou"){const t0=($("ia-cola").value||"").trim();if(!t0){toast("Cole a resposta primeiro");return;}IA.res=t0;iaUsaResultado();}
   else if(a==="iacopy2"){if(IA.res)copiar(IA.res);}
-  else if(a==="iausa"){const s0=cur(),t=s0&&s0.topicos.find(x=>x.id===IA.blk.tid),bl=t&&t.blocos.find(x=>x.id===IA.blk.bid);if(!bl||!IA.res)return;
-    if(IA.mode==="aplicar")t.blocos.splice(t.blocos.indexOf(bl)+1,0,{id:uid(),tipo:"texto",t:iaHtml(IA.res)});else bl.t=iaHtml(IA.res);
-    s0.at=Date.now();salvar();fechar();rerender();toast(IA.mode==="aplicar"?"Aplicação adicionada":"Texto substituído");}
+  else if(a==="iausa"){iaUsaResultado();}
   else if(a==="ilusabrir"){V.tela="ilus";V.iq="";V.itag="";render();scrollTo(0,0);}
   else if(a==="ilusfecha"){V.tela="lista";V.tab="mais";render();scrollTo(0,0);}
   else if(a==="ilusnova")abrirIlus();
@@ -2544,11 +2603,14 @@ document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.b==="ref"&&V.tela==="edit"){const t=achaT(e.target),bl=t.blocos.find(x=>x.id===e.target.closest("[data-bid]").dataset.bid),tx=textoRef(bl.ref);if(tx&&!bl.t){bl.t=tx;salvar();rerender();}}
 });
 function input(){}
-document.addEventListener("change",e=>{const t=e.target;if(t&&t.id==="ia-s"){IA.sid=t.value;IA.ctx=!!t.value;}});
+document.addEventListener("focusin",e=>{if(e.target&&e.target.id==="ia-t"){clearTimeout(iaKb.t);document.body.classList.add("ia-kb");}});
+document.addEventListener("focusout",e=>{if(e.target&&e.target.id==="ia-t"){clearTimeout(iaKb.t);iaKb.t=setTimeout(()=>document.body.classList.remove("ia-kb"),300);}});
+function iaKb(){}
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="q"){V.q=t.value;renderMsgs();return;}
   if(t.id==="iq"){V.iq=t.value;renderIlus();return;}
+  if(t.id==="ia-bq"){iaPickLista(t.value);return;}
   if(t.id==="ia-t"){t.style.height="auto";t.style.height=Math.min(140,t.scrollHeight)+"px";return;}
   if(t.id==="bq"){V.bq=t.value;clearTimeout(input.t);input.t=setTimeout(()=>{if(V.tab!=="biblia"||V.bk!==null)return;const f=document.activeElement&&document.activeElement.id==="bq";renderBiblia();if(f){const e=$("bq");e.focus();e.setSelectionRange(e.value.length,e.value.length);}},350);return;}
   if(V.tela!=="edit"||!cur()||t.closest("#modal"))return;
@@ -2583,7 +2645,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="30";
+const VER="32";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
