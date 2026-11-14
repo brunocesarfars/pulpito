@@ -396,6 +396,96 @@ mark.g1{background:rgba(245,211,74,.4)}mark.g2{background:rgba(94,200,130,.36)}m
 .pkv:last-child{border-bottom:0}.pkv b{flex:none;width:26px;color:var(--muted)}.pkv span{flex:1;min-width:0}
 .pkv.on{background:var(--gold-soft)}.pkv.on b{color:var(--gold)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Visual v2 ===== */
+:root{--navh:92px}
+.seg,.pastas,.hs,.vers{scrollbar-width:none}
+.seg::-webkit-scrollbar,.pastas::-webkit-scrollbar,.hs::-webkit-scrollbar{display:none}
+.app{padding-bottom:calc(var(--navh) + 36px + env(safe-area-inset-bottom))}
+/* menu flutuante */
+nav.nav{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:600px;margin:0 auto;padding:8px 6px;border:1px solid var(--line);border-radius:32px;background:color-mix(in srgb,var(--card) 95%,transparent);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 20px 44px -14px #000c,0 1px 0 #ffffff0d inset}
+nav.nav div{max-width:none!important;margin:0;display:flex;gap:2px}
+nav.nav button{flex:1;min-width:0;padding:2px 0 0;gap:4px;font-size:11px;font-weight:500;color:var(--muted);transition:flex .25s}
+nav.nav button.on{flex:1.55;color:var(--text);font-weight:700}
+nav.nav button i{width:100%;padding:9px 0;border-radius:22px;margin:0;transition:background .2s,color .2s,transform .15s}
+nav.nav button.on i{background:var(--gold);color:var(--gold-ink)}
+nav.nav button:active i{transform:scale(.94)}
+.fab{bottom:calc(var(--navh) + 14px + env(safe-area-inset-bottom))}
+#selbar{bottom:calc(var(--navh) + 12px + env(safe-area-inset-bottom))}
+@media(min-width:700px){nav.nav{max-width:680px}}
+/* campos de busca */
+.sbox{display:flex;align-items:center;gap:10px;height:50px;padding:0 16px;margin-bottom:14px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.sbox:focus-within{border-color:var(--gold-line)}
+.sbox input{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:0;color:var(--text);font-size:15.5px}
+.seg.eq button{flex:1;text-align:center}
+.sd2{color:var(--muted);font-size:14px;margin:-8px 2px 16px}
+/* Bíblia */
+.cont{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px 18px;margin-bottom:6px;border-radius:22px;background:linear-gradient(135deg,var(--gold),color-mix(in srgb,var(--gold) 62%,#7a4a00));color:var(--gold-ink);box-shadow:0 16px 34px -18px var(--gold)}
+.cont small{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.cont b{display:block;font-family:var(--display);font-size:22px;line-height:1.15;margin-top:3px}
+.cont .go{margin-left:auto;flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#0000001f}
+.bsec{display:flex;align-items:center;gap:10px;margin:24px 2px 10px;font-family:var(--display);font-weight:700;font-size:15.5px}
+.bsec::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+.bsec small{margin-left:auto;font-family:var(--body);font-weight:500;font-size:12.5px;color:var(--muted)}
+.bgrid{gap:10px}
+.bgrid button.bk{position:relative;display:flex;flex-direction:column;justify-content:center;gap:3px;min-height:64px;padding:11px 12px 11px 18px;border-radius:16px;overflow:hidden;text-align:left;background:var(--card);border:1px solid var(--line)}
+.bgrid button.bk::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--c)}
+.bgrid button.bk b{font-size:15px;font-weight:650;line-height:1.2;overflow-wrap:anywhere}
+.bgrid button.bk small{font-size:12px;color:var(--muted)}
+.bgrid button.bk:active{transform:scale(.98);border-color:var(--c)}
+.bhero{display:flex;align-items:center;gap:14px;padding:16px 18px;margin-bottom:16px;border-radius:20px;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 22%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--c) 40%,var(--line))}
+.bhero small{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c)}
+.bhero b{font-family:var(--display);font-size:20px}
+.cgrid{grid-template-columns:repeat(5,1fr);gap:10px}
+.cgrid button{position:relative;border-radius:16px;font-size:17px;font-weight:650;box-shadow:0 8px 20px -16px #000c}
+.cgrid button.ult{border-color:var(--gold);background:var(--gold-soft);color:var(--gold)}
+.cgrid button.mk::after{content:"★";position:absolute;top:3px;right:6px;font-size:10px;color:var(--gold)}
+.cgrid button:active{transform:scale(.95)}
+@media(min-width:700px){.bgrid{grid-template-columns:repeat(3,1fr)}.cgrid{grid-template-columns:repeat(8,1fr)}}
+/* Início */
+.hero .chips{margin:10px 0 4px}
+.hero .chip{background:#ffffff12;border-color:#ffffff1f;color:var(--text)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stats div{padding:12px 4px;border-radius:16px;background:var(--card);border:1px solid var(--line);text-align:center}
+.stats b{display:block;font-family:var(--display);font-size:22px;line-height:1.1}
+.stats span{font-size:11.5px;color:var(--muted)}
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.acts button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 2px 11px;border-radius:18px;background:var(--card);border:1px solid var(--line);font-size:12.5px;font-weight:600}
+.acts button .ic{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:var(--gold-soft);color:var(--gold)}
+.acts button:active{transform:scale(.96)}
+.sech{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
+.sech h3{font-family:var(--display);font-size:17px;font-weight:700}
+.sech button{font-size:13px;color:var(--gold);font-weight:600}
+.hs{display:flex;gap:10px;overflow-x:auto;margin:0 0 6px;padding:2px 0 6px;scroll-snap-type:x proximity}
+.mini{flex:none;width:210px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;border-radius:18px;background:var(--card);border:1px solid var(--line)}
+.mini b{font-family:var(--display);font-size:16px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mini small{color:var(--muted);font-size:12.5px}
+.idea{display:flex;gap:8px;align-items:center}
+.idea input{flex:1;min-width:0;height:46px;padding:0 14px;border-radius:14px;background:var(--card2);border:1px solid var(--line);color:var(--text)}
+.idea button{flex:none;height:46px;padding:0 16px;border-radius:14px;background:var(--gold);color:var(--gold-ink);font-weight:700}
+.card.vd .btn{margin-top:4px}
+.card h3{display:flex;align-items:center;gap:6px}
+.badge{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:700;background:var(--gold-soft);color:var(--gold)}
+/* Mensagens */
+.pastas{gap:8px;margin-bottom:12px}
+.pasta{flex-direction:row;align-items:center;gap:8px;min-width:0;padding:9px 14px;border-radius:99px;white-space:nowrap}
+.pasta svg{margin:0;width:18px;height:18px}.pasta small{display:inline;margin-left:2px}
+.sc3{--st:var(--muted);position:relative;margin-bottom:12px;border-radius:22px;overflow:hidden;background:var(--card);border:1px solid var(--line);box-shadow:0 14px 34px -26px #000d}
+.sc3.s-rascunho{--st:var(--blue)}.sc3.s-pronto{--st:var(--green)}.sc3.s-pregado{--st:var(--gold)}
+.sc3::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--st)}
+.sc3 .sb3{display:flex;flex-direction:column;gap:7px;width:100%;text-align:left;padding:16px 56px 8px 20px}
+.sc3 .sb3 b{font-family:var(--display);font-size:18px;line-height:1.25;font-weight:700}
+.sc3 .sm{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:13px}
+.sc3 .sm span{display:inline-flex;align-items:center;gap:5px}
+.sc3 .sm svg{width:14px;height:14px}
+.sc3 .stb{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--muted)}
+.sc3 .stb.on{color:var(--gold)}
+.sc3 .ac3{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 14px 14px 20px}
+.sc3 .ac3 .hs3{font-size:12.5px;color:var(--muted)}
+.sc3 .pl{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px 0 14px;border-radius:99px;background:var(--gold);color:var(--gold-ink);font-weight:700;font-size:14px;margin-left:auto}
+.ctl .meta{font-size:13.5px}
+.chip{display:inline-flex;align-items:center;gap:5px;line-height:1.35;padding:3px 11px}
+.chips{align-items:center}
 </style>
 </head>
 <body>
@@ -1039,6 +1129,10 @@ const IC={
  timer:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 2.5h5"/>',
  type:'<path d="M4 6V4h16v2M9 20h6M12 4v16"/>',
  trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+ bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
  cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>',
  cross:'<path d="M12 3v18M6 9h12"/>',
@@ -1070,24 +1164,26 @@ function versoDoDia(){const d=new Date(),n=Math.floor((d-new Date(d.getFullYear(
 function renderInicio(){
   const ev=proxEventos(),evMsg=ev.find(e=>e.msgId&&sermao(e.msgId));
   const alvo=evMsg?sermao(evMsg.msgId):(db.sermoes.filter(s=>s.status==="pronto").sort((a,b)=>b.at-a.at)[0]||db.sermoes.slice().sort((a,b)=>b.at-a.at)[0]);
-  const ult=db.sermoes.filter(s=>s.aberto).sort((a,b)=>b.aberto-a.aberto)[0];
-  const lemb=db.eventos.filter(e=>e.data===hoje()||e.data===amanha()).sort((a,b)=>(a.data+(a.hora||"")).localeCompare(b.data+(b.hora||"")));
-  const d=new Date();
-  const hr=d.getHours(),sd=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite",nm=(db.cfg.nome||"").trim();
+  const emAnd=db.sermoes.filter(s=>s.aberto).sort((a,b)=>b.aberto-a.aberto).slice(0,6);
+  const d=new Date(),hr=d.getHours(),sd=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite",nm=(db.cfg.nome||"").trim();
+  const dias=e=>{const n=Math.round((new Date(e.data+"T12:00")-new Date(hoje()+"T12:00"))/864e5);return n<=0?"Hoje":n===1?"Amanhã":"em "+n+" dias";};
+  const hists=[];db.sermoes.forEach(x=>(x.hist||[]).forEach(y=>hists.push({s:x,h:y})));hists.sort((a,b)=>(b.h.data||"").localeCompare(a.h.data||""));
+  const nPreg=hists.length,nPront=db.sermoes.filter(x=>x.status==="pronto").length;
   let h=`<div class="top"><h1>Púlpito<span>.</span></h1><button class="av" data-a="nome" aria-label="Seu nome">${esc((nm[0]||"P").toUpperCase())}</button></div><p class="sd">${sd}${nm?", "+esc(nm):""} · ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</p>`;
   if(alvo)h+=`<div class="hero"><small>Próxima pregação</small><h2>${esc(alvo.titulo||"Sem título")}</h2>
-    <div class="meta">${evMsg?metaEv(evMsg):alvo.min+" min · "+alvo.topicos.length+" tópicos"}</div>
+    <div class="chips">${evMsg?`<span class="chip">${ico("cal",13)} ${dias(evMsg)}</span>`:""}<span class="chip">${stNome(alvo.status)}</span><span class="chip">${alvo.min} min</span><span class="chip">${alvo.topicos.length} tópicos</span></div>
+    ${evMsg?`<div class="meta">${metaEv(evMsg)}</div>`:""}
     <div class="bar"><button class="btn gold" data-a="pregarId" data-v="${alvo.id}">▶ Pregar</button><button class="btn" data-a="abrir" data-v="${alvo.id}">Editar</button></div></div>`;
   else h+=`<div class="hero"><small>Comece por aqui</small><h2>Crie ou importe seu primeiro sermão</h2><div class="bar"><button class="btn gold" data-a="novo">+ Nova mensagem</button><button class="btn" data-a="import">Importar</button></div></div>`;
-  h+=`<div class="card"><h3>Próximos compromissos</h3>${ev.slice(0,3).map(e=>`<div class="li"><div class="d"><b>${e.data.slice(8)}</b>${MESES[+e.data.slice(5,7)-1].slice(0,3)}</div><div><b>${esc(e.titulo)}</b><div class="meta">${e.hora||"Sem hora"}${e.local?" · "+esc(e.local):""}</div></div></div>`).join("")||`<p class="meta">Nenhum compromisso agendado.</p>`}
-    <button class="btn" style="width:100%;margin-top:8px" data-a="tab" data-v="agenda">Ver agenda</button></div>
-  <div class="card"><h3>Resumo</h3><div class="tiles"><div class="tile"><b>${db.sermoes.length}</b><span>Mensagens</span></div><div class="tile"><b>${ev.length}</b><span>Eventos</span></div><div class="tile"><b>${pastasTodas().length}</b><span>Pastas</span></div><div class="tile"><b>${db.sermoes.filter(s=>s.fav).length}</b><span>Favoritas</span></div></div></div>`;
-  if(ult)h+=`<div class="card"><h3>Continue de onde parou</h3><div class="li"><div><b>${esc(ult.titulo||"Sem título")}</b><div class="meta">${ult.topicos.length} tópicos · ${ult.min} min</div></div><button class="btn" data-a="abrir" data-v="${ult.id}">Abrir</button></div></div>`;
-  const vd=versoDoDia();
-  h+=`<div class="card vd"><h3>Versículo do dia</h3><p>“${esc(vd.t)}”</p><b>${esc(vd.ref)}</b></div>`;
-  if(db.sermoes.length&&(!db.cfg.ultBackup||Date.now()-db.cfg.ultBackup>6048e5))h+=`<div class="card alerta"><h3>Proteja seus sermões</h3><p class="meta">${db.cfg.ultBackup?"Faz mais de 7 dias da última cópia.":"Você ainda não fez cópia de segurança."} Se o navegador for limpo, os sermões somem.</p><button class="btn gold" style="width:100%;margin-top:10px" data-a="baixar">⤓ Baixar cópia agora</button></div>`;
-  h+=`<div class="card"><h3>Acesso rápido</h3><div class="qa"><button data-a="novo"><i>✎</i>Nova mensagem</button><button data-a="import"><i>⤓</i>Importar</button><button data-a="favs"><i>★</i>Favoritas</button></div></div>
-  <div class="card"><h3>Lembretes</h3>${lemb.map(e=>`<div class="li"><div><b>${esc(e.titulo)}</b><div class="meta">${e.data===hoje()?"Hoje":"Amanhã"}${e.hora?" às "+e.hora:""}${e.local?" · "+esc(e.local):""}</div></div></div>`).join("")||`<p class="meta">Nenhum lembrete para hoje ou amanhã.</p>`}</div>`;
+  h+=`<div class="stats"><div><b>${db.sermoes.length}</b><span>Mensagens</span></div><div><b>${nPront}</b><span>Prontas</span></div><div><b>${nPreg}</b><span>Pregações</span></div><div><b>${db.sermoes.filter(x=>x.fav).length}</b><span>Favoritas</span></div></div>`;
+  if(db.sermoes.length&&(!db.cfg.ultBackup||Date.now()-db.cfg.ultBackup>6048e5))h+=`<div class="card alerta"><h3>Proteja seus sermões</h3><p class="meta">${db.cfg.ultBackup?"Faz mais de 7 dias da última cópia.":"Você ainda não fez cópia de segurança."} Entrar com sua conta Google em Mais também mantém tudo salvo na nuvem.</p><button class="btn gold" style="width:100%;margin-top:10px" data-a="baixar">⤓ Baixar cópia agora</button></div>`;
+  h+=`<div class="acts"><button data-a="novo"><span class="ic">${ico("plus",20)}</span>Nova</button><button data-a="import"><span class="ic">${ico("file",20)}</span>Importar</button><button data-a="tab" data-v="biblia"><span class="ic">${ico("book",20)}</span>Bíblia</button><button data-a="favs"><span class="ic">${ico("star",20)}</span>Favoritas</button></div>`;
+  if(emAnd.length)h+=`<div class="sech"><h3>Continue de onde parou</h3><button data-a="tab" data-v="msgs">Ver todas</button></div><div class="hs">${emAnd.map(x=>`<button class="mini" data-a="abrir" data-v="${x.id}"><span class="chip st-${x.status}">${stNome(x.status)}</span><b>${esc(x.titulo||"Sem título")}</b><small>${x.topicos.length} tópicos · ${x.min} min</small></button>`).join("")}</div>`;
+  h+=`<div class="card" style="margin-top:14px"><h3>${ico("bulb",14)} Ideia rápida</h3><div class="idea"><input id="idq" placeholder="Anote uma ideia de pregação…" maxlength="120"><button data-a="ideia">Guardar</button></div></div>`;
+  const vd=versoDoDia(),vr=parseRef(vd.ref);
+  h+=`<div class="card vd"><h3>Versículo do dia</h3><p>“${esc(vd.t)}”</p><b>${esc(vd.ref)}</b>${vr?`<div><button class="btn" style="margin-top:12px" data-a="vdia" data-l="${vr.l}" data-c="${vr.c}" data-vs="${vr.todo?0:vr.v1}">Ler o capítulo</button></div>`:""}</div>`;
+  h+=`<div class="sech"><h3>Próximos compromissos</h3><button data-a="tab" data-v="agenda">Agenda</button></div><div class="card">${ev.slice(0,3).map(e=>`<div class="li"><div class="d"><b>${e.data.slice(8)}</b>${MESES[+e.data.slice(5,7)-1].slice(0,3)}</div><div><b>${esc(e.titulo)}</b><span class="badge">${dias(e)}</span><div class="meta">${e.hora||"Sem hora"}${e.local?" · "+esc(e.local):""}</div></div></div>`).join("")||`<p class="meta">Nenhum compromisso agendado.</p>`}</div>`;
+  if(hists.length)h+=`<div class="sech"><h3>Pregações recentes</h3></div><div class="card">${hists.slice(0,3).map(x=>`<div class="li"><div><b>${esc(x.s.titulo||"Sem título")}</b><div class="meta">${dataBR(x.h.data)}${x.h.local?" · "+esc(x.h.local):""}${x.h.min?" · "+x.h.min+" min":""}</div></div></div>`).join("")}</div>`;
   $("app").innerHTML=h+nav();
 }
 function agrupar(lista){
@@ -1111,10 +1207,12 @@ function abrirAgrupar(){
 }
 function cartao(s){
   const ls=livrosDo(s),n=s.hist.length,ult=n?s.hist.map(x=>x.data).sort().pop():"";
-  return `<div class="sc2 s-${s.status}"><button class="sb" data-a="abrir" data-v="${s.id}"><b>${esc(s.titulo||"Sem título")}</b>
-    <span class="sm">${s.min} min · ${s.topicos.length} tópico${s.topicos.length===1?"":"s"}${ls.length?" · "+esc(ls.slice(0,2).join(", ")+(ls.length>2?"…":"")):""}</span>
-    <span class="chips"><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}${n?`<span class="chip">Pregado ${n}× · ${dataBR(ult)}</span>`:""}</span></button>
-    <div class="sa"><button class="pl" data-a="pregarId" data-v="${s.id}" aria-label="Pregar esta mensagem">${ico("play",17)}</button><button class="stb ${s.fav?"on":""}" data-a="fav" data-v="${s.id}" aria-label="Favoritar">${ico("star",20)}</button></div></div>`;
+  return `<div class="sc3 s-${s.status}"><button class="sb3" data-a="abrir" data-v="${s.id}">
+    <span class="chips" style="margin:0"><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}</span>
+    <b>${esc(s.titulo||"Sem título")}</b>
+    <span class="sm"><span>${ico("clock",14)}${s.min} min</span><span>${ico("list",14)}${s.topicos.length} tópico${s.topicos.length===1?"":"s"}</span>${ls.length?`<span>${ico("book",14)}${esc(ls.slice(0,2).join(", ")+(ls.length>2?"…":""))}</span>`:""}</span></button>
+    <button class="stb ${s.fav?"on":""}" data-a="fav" data-v="${s.id}" aria-label="Favoritar">${ico("star",20)}</button>
+    <div class="ac3"><span class="hs3">${n?"Pregado "+n+"× · "+dataBR(ult):"Ainda não pregada"}</span><button class="pl" data-a="pregarId" data-v="${s.id}" aria-label="Pregar esta mensagem">${ico("play",16)}Pregar</button></div></div>`;
 }
 function renderMsgs(){
   const q=norm(V.q.trim());
@@ -1123,8 +1221,8 @@ function renderMsgs(){
   if(V.filtro==="recentes")lista=lista.slice(0,8);
   const grupos=agrupar(lista),pastas=pastasTodas(),gn=(GRUPOS.find(x=>x[0]===V.grupo)||GRUPOS[0])[1];
   let h=`<div class="top"><h1>Mensagens</h1><button class="ib" data-a="import" aria-label="Importar PDF ou Word">${ico("file",20)}</button><button class="ib" data-a="npasta" aria-label="Nova pasta">${ico("folder",20)}</button></div>
-  <input class="search" id="q" type="search" placeholder="Buscar mensagens, tópicos ou versículos" value="${esc(V.q)}">
-  <div class="seg">${[["todas","Todas"],["favoritas","Favoritas"],["recentes","Recentes"]].map(([k,n])=>`<button class="${V.filtro===k?"on":""}" data-a="filtro" data-v="${k}">${n}</button>`).join("")}</div>`;
+  <label class="sbox">${ico("search",20)}<input id="q" type="search" placeholder="Buscar mensagens ou versículos" value="${esc(V.q)}"></label>
+  <div class="seg eq">${[["todas","Todas"],["favoritas","Favoritas"],["recentes","Recentes"]].map(([k,n])=>`<button class="${V.filtro===k?"on":""}" data-a="filtro" data-v="${k}">${n}</button>`).join("")}</div>`;
   if(pastas.length)h+=`<div class="pastas">${pastas.map(p=>`<button class="pasta ${V.pasta===p?"on":""}" data-a="pasta" data-v="${esc(p)}">${ico("folder",20)}<span>${esc(p)}</span><small>${db.sermoes.filter(s=>s.pasta===p).length}</small></button>`).join("")}</div>`;
   h+=`<div class="ctl"><span class="meta">${lista.length} mensage${lista.length===1?"m":"ns"}</span><button class="agr" data-a="agrupar">${ico("sort",16)}${gn}</button></div>`;
   if(!lista.length)h+=`<p class="empty">${db.sermoes.length?"Nada encontrado.":"Nenhuma mensagem ainda. Toque em + para criar."}</p>`;
@@ -1137,22 +1235,31 @@ function renderMsgs(){
   $("app").innerHTML=h+nav();
   if(foco){const e=$("q");e.focus();e.setSelectionRange(e.value.length,e.value.length);}
 }
+const CATS=[[0,4,"Lei","#e0a93b","AT"],[5,16,"Livros históricos","#e07f5a","AT"],[17,21,"Poéticos e sabedoria","#b58be6","AT"],[22,26,"Profetas maiores","#4fb6a2","AT"],[27,38,"Profetas menores","#6f9be6","AT"],[39,42,"Evangelhos","#f2b93b","NT"],[43,43,"História da igreja","#e57c9d","NT"],[44,56,"Cartas de Paulo","#5fc98a","NT"],[57,64,"Cartas gerais","#8fa6c2","NT"],[65,65,"Profecia","#e0605f","NT"]];
+const catDe=l=>CATS.find(c=>l>=c[0]&&l<=c[1])||CATS[0];
 function renderBiblia(){
   const B=bib(),c=db.cfg;let h="";
   if(V.bk===null){
-    const ult=c.ult;
-    h=`<div class="top"><h1>Bíblia</h1></div>
+    const ult=c.ult,vn=(versList()[c.versao||"acf"]||VERS.acf).n;
+    h=`<div class="top"><h1>Bíblia</h1></div><p class="sd2">${vn} · 66 livros</p>
     <div class="seg">${Object.keys(versList()).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}" title="${versList()[k].d}">${versList()[k].n}</button>`).join("")}</div>
-    <input class="search" id="bq" type="search" placeholder="Buscar palavra ou ir a um texto (ex.: Jo 3:16)" value="${esc(V.bq)}">
+    <label class="sbox">${ico("search",20)}<input id="bq" type="search" placeholder="Buscar palavra ou texto (ex.: Jo 3:16)" value="${esc(V.bq)}"></label>
     <div id="bres">${resBusca()}</div>`;
     if(!V.bq.trim()){
-      if(ult&&B[ult.l])h+=`<button class="btn gold" style="width:100%;margin-bottom:12px" data-a="bgo" data-l="${ult.l}" data-c="${ult.c}">Continuar: ${LIVROS[ult.l]} ${ult.c}</button>`;
-      h+=`<div class="seg">${[["todos","Todos"],["AT","Antigo T."],["NT","Novo T."]].map(([k,n])=>`<button class="${V.at===k?"on":""}" data-a="bat" data-v="${k}">${n}</button>`).join("")}</div><div class="bgrid">`;
-      LIVROS.forEach((n,i)=>{if(V.at==="AT"&&i>=39||V.at==="NT"&&i<39)return;h+=`<button data-a="bliv" data-v="${i}">${n}</button>`;});
-      h+=`</div>`;
+      if(ult&&B[ult.l])h+=`<button class="cont" data-a="bgo" data-l="${ult.l}" data-c="${ult.c}"><span><small>Continuar lendo</small><b>${LIVROS[ult.l]} ${ult.c}</b></span><span class="go">${ico("arrow",20)}</span></button>`;
+      h+=`<div class="seg eq" style="margin-top:14px;margin-bottom:0">${[["todos","Todos"],["AT","Antigo T."],["NT","Novo T."]].map(([k,n])=>`<button class="${V.at===k?"on":""}" data-a="bat" data-v="${k}">${n}</button>`).join("")}</div>`;
+      CATS.forEach(([i0,i1,nm,cor,t])=>{
+        if(V.at!=="todos"&&V.at!==t)return;
+        h+=`<div class="bsec" style="--c:${cor}">${nm}<small>${i1-i0+1} ${i1>i0?"livros":"livro"}</small></div><div class="bgrid" style="--c:${cor}">`;
+        for(let i=i0;i<=i1;i++)h+=`<button class="bk" data-a="bliv" data-v="${i}"><b>${LIVROS[i]}</b><small>${B[i]?B[i].length:0} capítulos</small></button>`;
+        h+=`</div>`;
+      });
     }
   }else if(V.ch===null){
-    h=`<div class="top"><button class="ib" data-a="bvolta" aria-label="Voltar">←</button><h1 style="font-size:22px">${LIVROS[V.bk]}</h1></div><div class="cgrid">${B[V.bk].map((_,i)=>`<button data-a="bcap" data-v="${i+1}">${i+1}</button>`).join("")}</div>`;
+    const ct=catDe(V.bk),mc=c.marca&&c.marca.l===V.bk?c.marca.c:0,u=c.ult&&c.ult.l===V.bk?c.ult.c:0;
+    h=`<div class="top"><button class="ib" data-a="bvolta" aria-label="Voltar">←</button><h1 style="font-size:24px">${LIVROS[V.bk]}</h1></div>
+    <div class="bhero" style="--c:${ct[3]}"><div><small>${ct[4]==="AT"?"Antigo":"Novo"} Testamento · ${ct[2]}</small><b>${B[V.bk].length} capítulos</b></div></div>
+    <div class="cgrid">${B[V.bk].map((_,i)=>`<button class="${u===i+1?"ult":""} ${mc===i+1?"mk":""}" data-a="bcap" data-v="${i+1}">${i+1}</button>`).join("")}</div>`;
   }else{
     const vs=B[V.bk][V.ch-1]||[],k=V.bk+"."+V.ch+".",mk=c.marca&&c.marca.l===V.bk&&c.marca.c===V.ch;
     h=`<div class="top"><button class="ib" data-a="bvolta" aria-label="Voltar">←</button><h1 style="font-size:20px">${LIVROS[V.bk]} ${V.ch}</h1>
@@ -2032,6 +2139,8 @@ document.addEventListener("click",e=>{
   else if(a==="grupo"){V.grupo=v;db.cfg.agr=v;salvar();fechar();renderMsgs();}
   else if(a==="agrupar")abrirAgrupar();
   else if(a==="filtro"){V.filtro=v;renderMsgs();}
+  else if(a==="ideia"){const e=$("idq"),t=e&&e.value.trim();if(!t){toast("Escreva a ideia primeiro");return;}db.sermoes.push({id:uid(),titulo:t,assunto:"",pasta:"",min:30,at:Date.now(),status:"ideia",base:"",fav:false,aberto:0,hist:[],topicos:[]});ajustar();salvar();toast("Ideia guardada em Mensagens");render();}
+  else if(a==="vdia"){V.tab="biblia";V.sel=new Set();V.bk=+b.dataset.l;V.ch=+b.dataset.c;V.alvo=+(b.dataset.vs||0);V.bq="";db.cfg.ult={l:V.bk,c:V.ch};salvar();renderBiblia();if(!V.alvo)scrollTo(0,0);}
   else if(a==="favs"){V.tab="msgs";V.filtro="favoritas";V.pasta="";render();}
   else if(a==="pasta"){V.pasta=V.pasta===v?"":v;renderMsgs();}
   else if(a==="npasta")abrirPasta();
