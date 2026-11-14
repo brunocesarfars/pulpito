@@ -581,6 +581,14 @@ button.iactx{width:100%;text-align:left}
   .igrid>.vd{order:8}
   .igrid>.ig-rec{grid-column:1/-1;order:9}
 }
+.tgl{flex:none;width:46px;height:28px;border-radius:99px;background:var(--card2);border:1.5px solid var(--line);position:relative;transition:background .2s}
+.tgl i{position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}
+.tgl.on{background:var(--gold);border-color:var(--gold)}
+.tgl.on i{transform:translateX(18px);background:#fff}
+.stp{flex:none;display:flex;align-items:center;gap:6px}
+.stp button{width:36px;height:36px;border-radius:11px;background:var(--card2);border:1px solid var(--line);font-size:19px;font-weight:700;line-height:1}
+.stp b{min-width:30px;text-align:center;font-size:15px}
+.opcs .rw:first-child{border-top:0}
 </style>
 </head>
 <body>
@@ -2218,20 +2226,30 @@ function abrirListaT(){
   $("modal").classList.add("show");
 }
 function abrirAjustes(){
-  $("mb").innerHTML=`<h3>Ajustes</h3>
-  <div class="bar" style="margin-top:0"><button class="btn" data-a="fmenos">A−</button><span class="meta" style="align-self:center">Letra ${db.cfg.fonte}</span><button class="btn" data-a="fmais">A+</button></div>
-  <div class="bar"><button class="btn" data-a="menos">−5 min</button><button class="btn" data-a="mais">+5 min</button></div>
-  <div class="bar"><button class="btn" data-a="som">${db.cfg.som?"🔔 Sinal ligado":"🔕 Sinal desligado"}</button><button class="btn" data-a="modo">${db.cfg.modo==="regressivo"?"Contagem regressiva":"Tempo decorrido"}</button></div>
-  <div class="bar"><button class="btn" data-a="zerar">Zerar cronômetro</button><button class="btn" data-a="fechar">Fechar</button></div>`;
+  const sm=sermao(P.id)||{},esc0=document.documentElement.dataset.tema||"escuro",roll=sm.modo==="rolagem";
+  const tg=on=>`<span class="tgl ${on?"on":""}"><i></i></span>`;
+  const stp=(m,v,l,pl)=>`<span class="stp"><button data-a="${m}" aria-label="Diminuir">−</button><b>${v}</b><button data-a="${pl}" aria-label="Aumentar">+</button></span>`;
+  const dv=(ic,t,sub,fim)=>`<div class="rw"><span class="ic">${ic}</span><span class="rt2"><b>${t}</b>${sub?`<small>${sub}</small>`:""}</span>${fim}</div>`;
+  $("mb").innerHTML=`<h3>Opções</h3><div class="rows opcs">
+  ${linha(ico("palette",18),"Tema do aplicativo",esc0==="claro"?"Claro ativo":"Escuro ativo","temaP",undefined,tg(esc0!=="claro"))}
+  ${dv(ico("type",18),"Tamanho da fonte","Ajuste a letra do texto",stp("fmenos",db.cfg.fonte,"","fmais"))}
+  ${linha(ico("list",18),"Modo de leitura",roll?"Rolagem contínua":"Tópico a tópico","modoPP",undefined,tg(roll))}
+  ${dv(ico("timer",18),"Tempo da mensagem","Total previsto em minutos",stp("menos",Math.round(P.total/60000),"","mais"))}
+  ${linha(ico("bell",18),"Sinal sonoro",db.cfg.som?"Ligado":"Desligado","som",undefined,tg(db.cfg.som))}
+  ${linha(ico("clock",18),"Cronômetro",db.cfg.modo==="regressivo"?"Contagem regressiva":"Tempo decorrido","modo",undefined,tg(db.cfg.modo==="regressivo"))}
+  ${linha(ico("hl",18),"Editar mensagem","Alterar tópicos e textos","preditar")}
+  ${linha(ico("pdf",18),"Exportar para PDF","Gerar o esboço em PDF","ppdf")}
+  ${linha(ico("arrow",18),"Reiniciar tempo","Zera o cronômetro","zerar")}
+  </div><div class="bar" style="margin-top:14px"><button class="btn gold" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
 async function travarTela(){try{if(navigator.wakeLock)wake=await navigator.wakeLock.request("screen");}catch(e){}}
-function sairPregar(){
+function sairPregar(semReg){
   const id=P.id,real=Math.round(elapsed()/60000);
   clearInterval(tick);P=null;$("preach").className="";$("preach").innerHTML="";document.body.style.overflow="";fechar();
   try{if(wake)wake.release();}catch(e){}wake=null;
   render();
-  if(real>=1)abrirRegistro(id,real);
+  if(real>=1&&!semReg)abrirRegistro(id,real);
 }
 /* ---------- Registro de pregações ---------- */
 function abrirRegistro(id,min){
@@ -2587,9 +2605,13 @@ document.addEventListener("click",e=>{
   else if(a==="lista")abrirListaT();
   else if(a==="irt"){fechar();P.i=+v;P.sheet=false;if(P.roll){const e=$("tp"+v);if(e)e.scrollIntoView({behavior:"smooth",block:"start"});}else desenharPregar();}
   else if(a==="ajustes")abrirAjustes();
-  else if(a==="zerar"){P.acc=0;P.t0=null;P.fase=null;atualizar();fechar();}
-  else if(a==="mais"){P.total+=300000;atualizar();toast("+5 min");}
-  else if(a==="menos"){P.total=Math.max(60000,P.total-300000);atualizar();toast("−5 min");}
+  else if(a==="zerar"){P.acc=0;P.t0=null;P.fase=null;atualizar();fechar();toast("Tempo reiniciado");}
+  else if(a==="temaP"){db.cfg.tema=(document.documentElement.dataset.tema==="claro")?"escuro":"claro";salvar();aplicaTema();abrirAjustes();}
+  else if(a==="modoPP"){const s0=sermao(P.id);s0.modo=s0.modo==="rolagem"?"topicos":"rolagem";s0.at=Date.now();salvar();P.rolled=false;desenharPregar();abrirAjustes();}
+  else if(a==="preditar"){const id=P.id;fechar();sairPregar(true);V.id=id;V.tela="edit";V.apagar=null;V.ab=new Set();salvar();render();scrollTo(0,0);}
+  else if(a==="ppdf"){fechar();exportarPDF(sermao(P.id));}
+  else if(a==="mais"){P.total+=300000;atualizar();abrirAjustes();}
+  else if(a==="menos"){P.total=Math.max(60000,P.total-300000);atualizar();abrirAjustes();}
   else if(a==="fmais"||a==="fmenos"||a==="f2mais"||a==="f2menos"){db.cfg.fonte=Math.min(34,Math.max(14,db.cfg.fonte+(/mais/.test(a)?2:-2)));salvar();if(P){$("preach").style.setProperty("--nf",db.cfg.fonte+"px");abrirAjustes();}else refazSheet();}
   else if(a==="som"||a==="som2"){db.cfg.som=!db.cfg.som;salvar();if(P)abrirAjustes();else refazSheet();}
   else if(a==="modo"||a==="modo2"){db.cfg.modo=db.cfg.modo==="regressivo"?"crescente":"regressivo";salvar();if(P){abrirAjustes();atualizar();}else refazSheet();}
@@ -2683,7 +2705,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="34";
+const VER="35";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
