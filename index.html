@@ -1206,15 +1206,35 @@ function renderMais(){
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
   ${tile("biblia","book","Bíblia",(versList()[ver]||VERS.acf).n)}
   ${tile("preg","timer","Pregação","Sinal, tempo e letra")}
+  ${tile("mapa","book","Livros e capítulos","Resumo do que você já usou")}
   ${tile("lixeira","trash","Lixeira",(db.lixeira||[]).length?(db.lixeira.length+" sermão(ões) · 30 dias"):"Sermões excluídos")}
   ${tile("sobre","info","Sobre","Púlpito")}
   </div>${nav()}`;
 }
 function segV(lista,atual,acao){return `<div class="seg" style="flex-wrap:wrap;margin:6px 0 4px">${lista.map(([k,n])=>`<button class="${atual===k?"on":""}" data-a="${acao}" data-v="${k}">${n}</button>`).join("")}</div>`;}
+function mapaBiblico(){
+  const M={};let n=0;
+  db.sermoes.forEach(s=>{
+    const refs=[s.base];s.topicos.forEach(t=>{refs.push(t.ref);t.blocos.forEach(b=>{if(b.tipo==="biblico")refs.push(b.ref);});});
+    const vistos=new Set();
+    refs.forEach(r=>{const x=parseRef(r);if(!x)return;const k=x.l+":"+x.c+":"+s.id;if(vistos.has(k))return;vistos.add(k);((M[x.l]=M[x.l]||{})[x.c]=M[x.l][x.c]||[]).push(s);});
+  });
+  const ls=Object.keys(M).map(Number).sort((a,b)=>a-b);
+  if(!ls.length)return `<h3>Livros e capítulos</h3><p class="meta">Quando você colocar texto base ou versículos nos sermões, o resumo aparece aqui.</p>`;
+  const prg=db.sermoes.filter(s=>s.hist&&s.hist.length).length;
+  let h=`<h3>Livros e capítulos</h3><p class="meta" style="margin-bottom:10px">${ls.length} de 66 livros usados em ${db.sermoes.length} sermão(ões). ✓ = já pregado.</p>`;
+  ls.forEach(l=>{
+    const cs=Object.keys(M[l]).map(Number).sort((a,b)=>a-b);
+    h+=`<div class="card" style="margin:0 0 8px"><b>${esc(LIVROS[l])}</b> <span class="meta">· ${cs.length} cap.</span>`+
+      cs.map(c=>`<div class="meta" style="margin-top:4px"><b>${c}</b> — ${M[l][c].map(x=>esc(x.titulo||"Sem título")+(x.hist&&x.hist.length?" ✓":"")).join("; ")}</div>`).join("")+`</div>`;
+  });
+  return h;
+}
 function abrirSheet(k){
   SHEET=k;const c=db.cfg,ver=c.versao||"acf";let h="";
   if(k==="dados")h=`<h3>Cópia de segurança</h3><p class="meta" style="margin-bottom:12px">${ultBk()}. O arquivo guarda todos os seus sermões e a agenda.</p><div class="rows">${linha(ico("down",18),"Baixar cópia","Salva um arquivo no aparelho","baixar")}${linha(ico("up",18),"Restaurar cópia","De um arquivo salvo","restaurar")}</div>`;
   else if(k==="conta"){h=contaSheet();if(!SY.ready)fbCarrega().catch(()=>{});}
+  else if(k==="mapa")h=mapaBiblico();
   else if(k==="lixeira"){const L=db.lixeira||[];h=`<h3>Lixeira</h3><p class="meta" style="margin-bottom:12px">Sermões excluídos ficam aqui por 30 dias.</p>`+(L.length?`<div class="rows">${L.map(x=>linha(ico("up",18),esc(x.titulo||"Sem título"),"Excluído "+new Date(x.delAt).toLocaleDateString("pt-BR")+" · toque para restaurar","lixrest",x.id)).join("")}</div><div class="bar" style="margin-top:10px"><button class="btn danger" data-a="lixvazia">Esvaziar lixeira</button></div>`:`<p class="meta">Nada por aqui.</p>`);}
   else if(k==="tema")h=`<h3>Aparência</h3>${segV([["auto","Automático"],["claro","Claro"],["escuro","Escuro"]],c.tema,"tema")}<p class="meta">Automático segue o tema do celular.</p>`;
   else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Adicionar minha Bíblia","NVI, ARA ou NAA do seu arquivo","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
