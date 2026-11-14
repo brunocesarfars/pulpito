@@ -1999,7 +1999,7 @@ document.addEventListener("click",e=>{
   else if(a==="nome")abrirNome();
   else if(a==="nomeok"){db.cfg.nome=$("nm").value.trim();salvar();fechar();render();}
   else if(a==="addbib")abrirAddBib();
-  else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];idbDel(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
+  else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];idbDel(k);bibApaga(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
   else if(a==="det"){V.det=!V.det;rerender();}
   else if(a==="voltar"||a==="ok"){if(a==="ok")toast("Salvo");salvar();V.tela="lista";V.apagar=null;render();}
   else if(a==="tempo"){const s=cur();s.min=+v;s.at=Date.now();salvar();rerender();}
@@ -2061,7 +2061,7 @@ document.addEventListener("click",e=>{
   else if(a==="modo"||a==="modo2"){db.cfg.modo=db.cfg.modo==="regressivo"?"crescente":"regressivo";salvar();if(P){abrirAjustes();atualizar();}else refazSheet();}
   else if(a==="login")entrarGoogle();
   else if(a==="logout")sairConta();
-  else if(a==="syncnow"){syncTouch();syncPush();toast("Sincronizando…");}
+  else if(a==="syncnow"){syncTouch();syncPush();bibSync();toast("Sincronizando…");}
   else if(a==="nada"){}
   else if(a==="tema"){db.cfg.tema=v;salvar();aplicaTema();refazSheet();}
   else if(a==="dia")abrirDia(v);
@@ -2249,9 +2249,42 @@ function syncUser(u){
   SY.unsub=SY.fs.collection("users").doc(u.uid).collection("itens").onSnapshot(snap=>{
     snap.docChanges().forEach(ch=>{if(ch.type!=="removed")SY.rq.push(Object.assign({id:ch.doc.id},ch.doc.data()));});
     syncApply();
-    if(primeira){primeira=false;syncTouch();}
+    if(primeira){primeira=false;syncTouch();bibSync();}
     syncPush();
   },e=>{SY.estado="erro";SY.msg=erroFb(e);refazConta();});
+}
+/* Bíblias próprias (ex.: NVI) seguem para a conta privada e aparecem nos outros aparelhos */
+async function bibSync(){
+  if(!SY.user||!SY.fs||SY.bibOcup)return;SY.bibOcup=true;
+  try{
+    const m=syncMeta();m.bib=m.bib||{};
+    const col=SY.fs.collection("users").doc(SY.user.uid).collection("biblias");
+    for(const c of (db.cfg.custom||[])){
+      if(m.bib[c.k])continue;
+      const d=await idbGet(c.k);if(!d)continue;
+      for(let i=0;i<d.length;i+=10){const b=SY.fs.batch();for(let j=i;j<Math.min(d.length,i+10);j++)b.set(col.doc(c.k+"_"+j),{k:c.k,i:j,d:JSON.stringify(d[j])});await b.commit();}
+      await col.doc("idx_"+c.k).set({k:c.k,n:c.n,total:d.length});
+      m.bib[c.k]=1;syncSave();
+    }
+    const snap=await col.get(),idx=[],partes={};
+    snap.forEach(doc=>{const x=doc.data();if(doc.id.startsWith("idx_"))idx.push(x);else(partes[x.k]=partes[x.k]||[])[x.i]=x.d;});
+    for(const x of idx){
+      if((db.cfg.custom||[]).some(c=>c.k===x.k))continue;
+      const ps=partes[x.k]||[];if(ps.filter(Boolean).length<x.total)continue;
+      const arr=ps.map(t=>JSON.parse(t));
+      await idbSet(x.k,arr);BIBS[x.k]=arr;
+      db.cfg.custom=(db.cfg.custom||[]).concat([{k:x.k,n:x.n}]);m.bib[x.k]=1;salvar();syncSave();
+      toast(x.n+" veio da sua conta",2600);refazSheet();
+    }
+  }catch(e){}
+  SY.bibOcup=false;
+}
+async function bibApaga(k){
+  if(!SY.user||!SY.fs)return;
+  try{const col=SY.fs.collection("users").doc(SY.user.uid).collection("biblias"),q=await col.where("k","==",k).get();
+    const docs=[];q.forEach(d=>docs.push(d.ref));
+    for(let i=0;i<docs.length;i+=15){const b=SY.fs.batch();docs.slice(i,i+15).forEach(r=>b.delete(r));await b.commit();}
+    const m=syncMeta();if(m.bib)delete m.bib[k];syncSave();}catch(e){}
 }
 async function entrarGoogle(){
   try{
