@@ -382,7 +382,7 @@ mark.g1{background:rgba(245,211,74,.4)}mark.g2{background:rgba(94,200,130,.36)}m
 .fmt .hl.x span{background:none;border:1.5px solid var(--muted);position:relative}
 .fmt .hl.x span::after{content:"";position:absolute;left:-2px;right:-2px;top:50%;border-top:1.5px solid var(--muted);transform:rotate(-45deg)}
 .pc h2.rh{font-family:var(--display);font-size:calc(var(--nf) + 5px);line-height:1.2;color:var(--gold);margin:26px 0 8px;font-weight:800}
-#preach.roll .pnav,#preach.roll .pside,#preach.roll .pmeta,#preach.roll .prail,#preach.roll .pl-btn{display:none!important}
+#preach.roll .pnav,#preach.roll .pside,#preach.roll .pmeta,#preach.roll .prail,#preach.roll .pl-btn,#preach.roll .rl-btn{display:none!important}
 #preach.show.roll{grid-template-columns:minmax(0,1fr);grid-template-areas:"bar" "prog" "cont" "sheet"}
 .pc .bl,.rt{text-align:justify;text-justify:inter-word;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
 .pc .bl li{text-align:left}
@@ -655,6 +655,16 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 .fmtbar .hl.x span{background:none;border:1.5px solid var(--muted);position:relative}
 .fmtbar .sep{flex:none;width:1px;height:22px;background:var(--line);margin:0 3px}
 @media(min-width:700px){.folha .bk.t-texto .rt{font-size:18.5px;line-height:1.75}.tpb .tin{font-size:26px}}
+
+/* ---- v43: recuo/barra e menu de tópicos recolhível ---- */
+.rt blockquote,.pc .bl blockquote{margin:.35em 0 .35em 1.3em;padding:0}
+.rt blockquote.bar,.pc .bl blockquote.bar{border-left:3px solid var(--gold);padding-left:12px}
+.rl-btn{display:none}
+@media (orientation:landscape) and (min-width:821px){
+  .rl-btn{display:grid}
+  #preach.show.railoff{grid-template-columns:minmax(0,1fr) 104px;grid-template-areas:"bar bar" "prog prog" "cont side" "sheet side"}
+  #preach.railoff .prail{display:none}
+}
 </style>
 </head>
 <body>
@@ -755,9 +765,9 @@ const amanha=()=>{const d=new Date();d.setDate(d.getDate()+1);return d.getFullYe
 const dataBR=d=>d?d.split("-").reverse().join("/"):"";
 /* Texto rico: só negrito, itálico e sublinhado passam. */
 function limpa(h){
-  const d=new DOMParser().parseFromString("<body>"+(h||"")+"</body>","text/html"),ok=new Set(["B","STRONG","I","EM","U","BR","DIV","P","MARK","UL","OL","LI"]);
+  const d=new DOMParser().parseFromString("<body>"+(h||"")+"</body>","text/html"),ok=new Set(["B","STRONG","I","EM","U","BR","DIV","P","MARK","UL","OL","LI","BLOCKQUOTE"]);
   (function w(n){[...n.childNodes].forEach(c=>{
-    if(c.nodeType===1){w(c);if(!ok.has(c.tagName))c.replaceWith(...c.childNodes);else[...c.attributes].forEach(a=>{if(!(c.tagName==="MARK"&&a.name==="class"&&/^g[1-3]$/.test(a.value)))c.removeAttribute(a.name);});}
+    if(c.nodeType===1){w(c);if(!ok.has(c.tagName))c.replaceWith(...c.childNodes);else[...c.attributes].forEach(a=>{if(!(c.tagName==="MARK"&&a.name==="class"&&/^g[1-3]$/.test(a.value))&&!(c.tagName==="BLOCKQUOTE"&&a.name==="class"&&a.value==="bar"))c.removeAttribute(a.name);});}
     else if(c.nodeType!==3)c.remove();
   });})(d.body);
   return d.body.innerHTML;
@@ -1163,7 +1173,7 @@ function renderEdit(y){
   <div class="dock"><div class="fmtbar" role="toolbar" aria-label="Formatação">
   <button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button>
   <button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button>
-  <i class="sep"></i><button data-a="flist" data-v="ul" aria-label="Lista com marcadores"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg></button><button data-a="flist" data-v="ol" aria-label="Lista numerada"><b style="font-size:13px">1.</b></button>
+  <i class="sep"></i><button data-a="flist" data-v="ul" aria-label="Lista com marcadores"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg></button><button data-a="flist" data-v="ol" aria-label="Lista numerada"><b style="font-size:13px">1.</b></button><button data-a="frec" aria-label="Recuar parágrafo (Tab)" title="Recuar parágrafo (Tab)"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M11 11h10M11 17h10M3 9l3 3-3 3"/></svg></button><button data-a="fbar" aria-label="Barra lateral no parágrafo" title="Barra lateral no parágrafo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4v16" stroke-width="3.5"/><path d="M11 8h9M11 12h9M11 16h6"/></svg></button>
   <i class="sep"></i><button class="tx" data-a="ins" data-v="biblico" aria-label="Inserir versículo">📖 Versículo</button><button class="tx" data-a="ins" data-v="citacao" aria-label="Inserir citação">❝ Citação</button><button class="tx" data-a="ins" data-v="obs" aria-label="Inserir observação">✎ Nota</button><button class="tx" data-a="ilusinsb" aria-label="Inserir ilustração">${ico("bulb",15)} Ilustração</button><button class="tx" data-a="iafoco" aria-label="Assistente de IA">${ico("spark",15)} IA</button>
   </div></div>`;
   $("app").innerHTML=h;
@@ -1221,6 +1231,25 @@ document.addEventListener("change",e=>{
   else if(t.id==="pk-l"&&PK){PK.l=+t.value;PK.c=1;PK.sel=new Set();desenhaPick();}
 });
 const rerender=()=>renderEdit(scrollY);
+function selBQ(){const sel=getSelection();if(!sel.rangeCount)return null;const n=sel.anchorNode,el=n&&(n.nodeType===1?n:n.parentElement);return el&&el.closest?el.closest(".rt blockquote"):null;}
+function recuo(tipo){
+  const r=document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".rt");
+  if(!r){toast("Toque dentro do texto primeiro",1800);return;}
+  let q=selBQ();
+  const blk=n=>n&&n.nodeType===1&&/^(DIV|P|UL|OL|BLOCKQUOTE)$/.test(n.tagName);
+  const solta=q=>{const pv=q.previousSibling,nx=q.nextSibling;if(pv&&!blk(pv))q.parentNode.insertBefore(document.createElement("br"),q);if(nx&&!blk(nx))q.parentNode.insertBefore(document.createElement("br"),nx);while(q.firstChild)q.parentNode.insertBefore(q.firstChild,q);q.remove();};
+  if(tipo==="rec"){if(q)solta(q);else document.execCommand("formatBlock",false,"blockquote");}
+  else if(tipo==="des"){if(q)solta(q);}
+  else if(tipo==="none"){}
+  else{if(!q){document.execCommand("formatBlock",false,"blockquote");q=selBQ();}if(q)q.classList.toggle("bar");}
+  r.dispatchEvent(new Event("input",{bubbles:true}));
+}
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Tab"||V.tela!=="edit"||e.ctrlKey||e.metaKey||e.altKey)return;
+  const r=document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".rt");if(!r)return;
+  const sel=getSelection(),n=sel.anchorNode,el=n&&(n.nodeType===1?n:n.parentElement);if(el&&el.closest("li"))return;
+  e.preventDefault();recuo(e.shiftKey?"des":(selBQ()?"none":"rec"));
+});
 function focoT(){const s=cur();let r={t:null,bl:null};if(V.fb&&s)for(const t of s.topicos){const bl=t.blocos.find(x=>x.id===V.fb);if(bl)r={t,bl};}if(r.t&&!V.ab.has(r.t.id))r={t:null,bl:null};return r;}
 function inserirBloco(tipo){
   const s=cur(),f=focoT(),t=f.t||s.topicos.find(x=>V.ab.has(x.id));
@@ -1886,7 +1915,7 @@ function desenharPregar(){
   let h=`<div class="pbar"><button class="ib" data-a="sair" aria-label="Sair do modo pregar">←</button>
     <div class="pill"><small>HORA ATUAL</small><b id="hora">00:00</b></div>
     <div class="pill tm2"><small>TEMPO DE MENSAGEM</small><b id="time">00:00</b><button id="go" data-a="go" aria-label="Iniciar ou pausar">▶</button></div>
-    <button class="ib pl-btn" data-a="lista" aria-label="Lista de tópicos">${ico("list",20)}</button><button class="ib" data-a="ajustes" aria-label="Ajustes">⚙</button></div>
+    <button class="ib rl-btn" data-a="railt" aria-label="Mostrar ou esconder a lista de tópicos">${ico("list",20)}</button><button class="ib pl-btn" data-a="lista" aria-label="Lista de tópicos">${ico("list",20)}</button><button class="ib" data-a="ajustes" aria-label="Ajustes">⚙</button></div>
   <div class="ptop" id="ptop">${n&&(!roll||n>1)?s.topicos.map((x,i)=>`<button class="${i<P.i?"done":i===P.i?"cur":""}" style="--w:${Math.max(palT(x),20)}" data-a="irt" data-v="${i}" aria-label="Tópico ${i+1}: ${esc(x.titulo||"")}"></button>`).join(""):""}<i id="tmark"></i></div>
   <div class="pmeta"><span>TÓPICO ${n?P.i+1:0} DE ${n}</span>${prox?`<button data-a="lista">Próximo: ${esc(prox.titulo)} ⌄</button>`:(n?`<button data-a="lista">Último tópico ⌄</button>`:"")}</div>
   <div class="pcont"><div class="pc">`;
@@ -1904,7 +1933,7 @@ function desenharPregar(){
   $("preach").innerHTML=h;
   $("preach").style.setProperty("--nf",db.cfg.fonte+"px");
   const c=document.querySelector(".pcont");if(c)c.scrollTop=st0;
-  P.rolled=roll;$("preach").classList.toggle("roll",roll);
+  P.rolled=roll;$("preach").classList.toggle("roll",roll);$("preach").classList.toggle("railoff",!!db.cfg.rail);
   if(roll&&c&&n>1)c.onscroll=()=>{
     const lim=c.getBoundingClientRect().top+c.clientHeight*.25;let k=0;
     s.topicos.forEach((x,j)=>{const e=$("tp"+j);if(e&&e.getBoundingClientRect().top<=lim)k=j;});
@@ -2312,6 +2341,9 @@ document.addEventListener("click",e=>{
   else if(a==="tog"){const ja=V.ab.has(v);V.ab=ja?new Set():new Set([v]);V.nop=ja?cur().id:null;rerender();if(!ja)setTimeout(()=>{const e=document.querySelector('.tp[data-t="'+v+'"]');if(e)scrollTo({top:e.getBoundingClientRect().top+scrollY-70,behavior:"smooth"});},30);}
   else if(a==="addt"){const s=cur(),t={id:uid(),titulo:"",ref:"",blocos:[]};s.topicos.push(t);V.ab=new Set([t.id]);salvar();rerender();setTimeout(()=>{const e=document.querySelector('.tp[data-t="'+t.id+'"] .tin');if(e){e.focus();e.scrollIntoView({block:"center",behavior:"smooth"});}},40);}
   else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();if(v==="biblico")abrirPick("bloco",bl.id);else focaBloco(bl.id);}
+  else if(a==="frec")recuo("rec");
+  else if(a==="fbar")recuo("bar");
+  else if(a==="railt"){db.cfg.rail=!db.cfg.rail;salvar();$("preach").classList.toggle("railoff",!!db.cfg.rail);}
   else if(a==="bmais"){const k=b.closest(".bk");if(k)k.classList.toggle("mais");}
   else if(a==="tmais"){const m=b.closest(".tpb").querySelector(".tmenu");if(m)m.classList.toggle("ver");}
   else if(a==="ins")inserirBloco(v);
@@ -2488,7 +2520,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="42";
+const VER="43";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
