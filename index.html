@@ -2341,7 +2341,8 @@ document.addEventListener("click",e=>{
   else if(a==="th"){const cur0=$("ev-h").value,m=cur0?+cur0.split(":")[1]:0;horaSet(+v,m);}
   else if(a==="tm"){const cur0=$("ev-h").value,h=cur0?+cur0.split(":")[0]:19;horaSet(h,+v);}
   else if(a==="tlimpa"){horaSet(null);$("tp").innerHTML="";}
-  else if(a==="updgo"){window.__atualizando=1;try{salvarJa();}catch(e){}const w=window.__w||(window.__reg&&window.__reg.waiting);if(w)w.postMessage("skip");else location.reload();setTimeout(()=>location.reload(),2500);}
+  else if(a==="updgo"){window.__atualizando=1;try{salvarJa();}catch(e){}b.textContent="Atualizando…";b.disabled=true;const fim=()=>location.reload();
+    (async()=>{try{const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));const ks=await caches.keys();await Promise.all(ks.filter(k=>!/assets/.test(k)).map(k=>caches.delete(k)));}catch(e){}fim();})();setTimeout(fim,3000);}
   else if(a==="updx"){const u=$("upd");if(u)u.remove();}
   else if(a==="chkupd"){const r=window.__reg;if(!r){toast("Atualização indisponível neste modo");return;}toast("Procurando…");r.update().then(()=>{setTimeout(()=>{if(r.waiting){mostraAtualiza(r.waiting);fechar();}else toast("Você já está na versão mais recente ("+VER+")",2400);},900);}).catch(()=>toast("Sem internet para verificar"));}
   else if(a==="ideia"){const e=$("idq"),t=e&&e.value.trim();if(!t){toast("Escreva a ideia primeiro");return;}db.sermoes.push({id:uid(),titulo:t,assunto:"",pasta:"",min:30,at:Date.now(),status:"ideia",base:"",fav:false,aberto:0,hist:[],topicos:[]});ajustar();salvar();toast("Ideia guardada em Mensagens");render();}
@@ -2583,7 +2584,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="45";
+const VER="46";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
@@ -2778,6 +2779,7 @@ setTimeout(()=>{let u=0;try{u=+localStorage.getItem("pulpito.snap")||0;}catch(e)
 try{if(JSON.parse(localStorage.getItem("pulpito.sync")||"{}").logado&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
 render();carregaPropriasBiblias();
 if(!db.cfg.nome&&!db.cfg.nomeAsk){db.cfg.nomeAsk=true;salvar();setTimeout(abrirNome,700);}
+async function verNova(){try{const r=await fetch("sw.js?_="+Date.now(),{cache:"no-store"}),t=await r.text(),m=t.match(/pulpito-v(\d+)/);if(m&&+m[1]>+VER)mostraAtualiza();}catch(e){}}
 function mostraAtualiza(w){
   if($("upd"))return;
   const d=document.createElement("div");d.id="upd";d.setAttribute("role","alert");
@@ -2787,10 +2789,8 @@ function mostraAtualiza(w){
 if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").then(reg=>{
     window.__reg=reg;
-    const avisa=()=>{if(reg.waiting&&navigator.serviceWorker.controller)mostraAtualiza(reg.waiting);};
-    avisa();
-    reg.addEventListener("updatefound",()=>{const n=reg.installing;if(n)n.addEventListener("statechange",()=>{if(n.state==="installed")avisa();});});
-    const chk=()=>{try{reg.update();}catch(e){}};
+    const chk=()=>{try{reg.update();}catch(e){}verNova();};
+    setTimeout(verNova,2500);
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk();});
     setInterval(chk,20*60*1000);
   }).catch(()=>{});
