@@ -657,14 +657,26 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 @media(min-width:700px){.folha .bk.t-texto .rt{font-size:18.5px;line-height:1.75}.tpb .tin{font-size:26px}}
 
 /* ---- v43: recuo/barra e menu de tópicos recolhível ---- */
-.rt blockquote,.pc .bl blockquote{margin:.35em 0 .35em 1.3em;padding:0}
-.rt blockquote.bar,.pc .bl blockquote.bar{border-left:3px solid var(--gold);padding-left:12px}
+.rt blockquote,.pc .bl blockquote:not(.cit){margin:.35em 0 .35em 1.3em;padding:0}
+.rt blockquote.bar,.pc .bl blockquote.bar:not(.cit){border-left:3px solid var(--gold);padding-left:12px}
 .rl-btn{display:none}
 @media (orientation:landscape) and (min-width:821px){
   .rl-btn{display:grid}
   #preach.show.railoff{grid-template-columns:minmax(0,1fr) 104px;grid-template-areas:"bar bar" "prog prog" "cont side" "sheet side"}
   #preach.railoff .prail{display:none}
 }
+
+/* ---- v44: janela flutuante da Bíblia ---- */
+#vf{position:fixed;right:14px;bottom:14px;width:min(430px,calc(100% - 28px));height:min(56vh,520px);background:var(--card);border:1px solid var(--gold);border-radius:18px;box-shadow:0 24px 60px -16px #000d;z-index:25;display:none;flex-direction:column;overflow:hidden}
+#vf.show{display:flex}
+.vfh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 8px 8px 14px;background:var(--gold-soft);cursor:grab;touch-action:none;color:var(--gold)}
+.vfb{display:flex;gap:4px}.vfb button{min-width:34px;height:34px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:14px;color:var(--ink)}
+.vfc{flex:1;overflow-y:auto;padding:10px 16px 18px;position:relative;line-height:1.6;-webkit-overflow-scrolling:touch}
+.vfc p{margin:0 0 .5em;padding:2px 6px;border-radius:8px}.vfc p b{color:var(--gold);font-size:.8em;margin-right:4px}
+.vfc p.on{background:var(--gold-soft);border-left:3px solid var(--gold)}
+.vlink{color:var(--gold);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.vl{font-size:12px;color:var(--gold);padding:0 6px;text-decoration:underline;margin-left:4px}
+@media (orientation:landscape) and (min-width:641px){#vf{width:min(400px,38vw);right:auto;left:14px}}
 </style>
 </head>
 <body>
@@ -1107,7 +1119,7 @@ function abrirNome(){
 const cur=()=>sermao(V.id);
 function blocoEd(b,i,n){
   const [ic,lab]=TIPOS[b.tipo];let c="";
-  if(b.tipo==="biblico")c=`<div class="bkh">${ic} ${lab}</div><div class="refrow"><input class="in rf2" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><button class="btn sm gold" data-a="pick" data-k="bloco" data-v="${b.id}">📚 Passagem</button><button class="btn sm" data-a="bfill" data-v="${b.id}">Buscar</button></div><textarea class="in ta" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea>`;
+  if(b.tipo==="biblico")c=`<div class="bkh">${ic} ${lab}${b.ref?` <button class="vl" data-a="vref" data-v="${esc(b.ref)}">abrir ↗</button>`:""}</div><div class="refrow"><input class="in rf2" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><button class="btn sm gold" data-a="pick" data-k="bloco" data-v="${b.id}">📚 Passagem</button><button class="btn sm" data-a="bfill" data-v="${b.id}">Buscar</button></div><textarea class="in ta" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea>`;
   else if(b.tipo==="texto")c=`<div class="rt" contenteditable="true" role="textbox" aria-label="Texto" data-ph="Escreva aqui…" data-b="html">${limpa(b.t)}</div>`;
   else if(b.tipo==="lista")c=`<div class="bkh">${ic} ${lab}</div><textarea class="in ta" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<div class="bkh">${ic} ${lab}</div><textarea class="in ta" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
@@ -1231,6 +1243,48 @@ document.addEventListener("change",e=>{
   else if(t.id==="pk-l"&&PK){PK.l=+t.value;PK.c=1;PK.sel=new Set();desenhaPick();}
 });
 const rerender=()=>renderEdit(scrollY);
+/* ---------- Janela flutuante da Bíblia (não sai da tela atual) ---------- */
+let VF=null,VFS=18;
+function abrirVF(ref){
+  const r=parseRef(ref);if(!r){toast("Não encontrei esse versículo na Bíblia",2200);return;}
+  VF={l:r.l,c:r.c,v1:r.todo?0:r.v1,v2:r.todo?0:r.v2};desenhaVF(true);
+}
+function desenhaVF(rolar){
+  if(!VF)return;
+  const B=bib(),caps=(B[VF.l]||[]).length,vs=(B[VF.l]||[])[VF.c-1]||[];
+  let el=$("vf");if(!el){el=document.createElement("div");el.id="vf";document.body.appendChild(el);
+    el.addEventListener("pointerdown",e=>{const h=e.target.closest(".vfh");if(!h||e.target.closest("button"))return;const r=el.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;h.setPointerCapture(e.pointerId);
+      const mv=ev=>{el.style.left=Math.max(0,Math.min(innerWidth-80,ev.clientX-dx))+"px";el.style.top=Math.max(0,Math.min(innerHeight-60,ev.clientY-dy))+"px";el.style.right="auto";el.style.bottom="auto";};
+      const up=()=>{h.removeEventListener("pointermove",mv);h.removeEventListener("pointerup",up);};h.addEventListener("pointermove",mv);h.addEventListener("pointerup",up);});}
+  el.innerHTML=`<div class="vfh"><b>📖 ${esc(LIVROS[VF.l])} ${VF.c}</b><span class="vfb"><button data-a="vfa" data-v="-1" aria-label="Diminuir letra">A−</button><button data-a="vfa" data-v="1" aria-label="Aumentar letra">A+</button><button data-a="vfc" data-v="-1" aria-label="Capítulo anterior">‹</button><button data-a="vfc" data-v="1" aria-label="Próximo capítulo">›</button><button data-a="vfx" aria-label="Fechar">✕</button></span></div><div class="vfc" id="vfc" style="font-size:${VFS}px">${vs.map((t,i)=>`<p id="vfv${i+1}" class="${VF.v1&&i+1>=VF.v1&&i+1<=VF.v2?"on":""}"><b>${i+1}</b> ${esc(t)}</p>`).join("")}</div>`;
+  el.classList.add("show");
+  if(rolar&&VF.v1){const c=$("vfc"),e=$("vfv"+VF.v1);if(c&&e)c.scrollTop=Math.max(0,e.offsetTop-8);}
+}
+function vfNav(d){
+  if(!VF)return;const B=bib();let l=VF.l,c=VF.c+d;
+  if(c<1){if(l>0){l--;c=(B[l]||[]).length;}else c=1;}
+  else if(c>(B[l]||[]).length){if(l<LIVROS.length-1){l++;c=1;}else c=VF.c;}
+  VF={l,c,v1:0,v2:0};desenhaVF(false);
+}
+function linkaRefs(root){
+  if(!root)return;
+  const rx=/((?:[123]\s?)?[A-Za-zÀ-ú]{1,14})\.?\s+(\d{1,3})(\s*[:.,]\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?)?/g;
+  root.querySelectorAll(".bl:not(.bib)").forEach(bl=>{
+    const w=document.createTreeWalker(bl,NodeFilter.SHOW_TEXT),ns=[];let n;while((n=w.nextNode()))ns.push(n);
+    ns.forEach(tn=>{
+      const tx=tn.textContent;rx.lastIndex=0;let m,u=0,f=null;
+      while((m=rx.exec(tx))){
+        const nome=m[1].replace(/^[123]\s?/,"");
+        if(!livroDe(m[1])||!(m[3]||nome.length>3||/^sl$/i.test(nome)))continue;
+        const ref=m[0].trim();if(!parseRef(ref))continue;
+        f=f||document.createDocumentFragment();
+        f.appendChild(document.createTextNode(tx.slice(u,m.index)));
+        const sp=document.createElement("span");sp.className="vlink";sp.dataset.a="vref";sp.dataset.v=ref;sp.textContent=m[0];f.appendChild(sp);u=m.index+m[0].length;
+      }
+      if(f){f.appendChild(document.createTextNode(tx.slice(u)));tn.replaceWith(f);}
+    });
+  });
+}
 function selBQ(){const sel=getSelection();if(!sel.rangeCount)return null;const n=sel.anchorNode,el=n&&(n.nodeType===1?n:n.parentElement);return el&&el.closest?el.closest(".rt blockquote"):null;}
 function recuo(tipo){
   const r=document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".rt");
@@ -1876,7 +1930,7 @@ function grifar(n){
   rt.dispatchEvent(new Event("input",{bubbles:true}));
 }
 function blocoPreg(b){
-  if(b.tipo==="biblico")return `<div class="bl bib"><div class="bt">📖 ${esc(b.ref)}</div>${(b.t||textoRef(b.ref))?`<div>${esc(b.t||textoRef(b.ref))}</div>`:""}</div>`;
+  if(b.tipo==="biblico")return `<div class="bl bib"><div class="bt"><span class="vlink" data-a="vref" data-v="${esc(b.ref)}">📖 ${esc(b.ref)} ↗</span></div>${(b.t||textoRef(b.ref))?`<div>${esc(b.t||textoRef(b.ref))}</div>`:""}</div>`;
   if(b.tipo==="lista")return `<div class="bl"><ul>${b.t.split("\n").filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
   if(b.tipo==="texto")return `<div class="bl${b.rec?" rec":""}" data-b="${b.id}">${limpa(b.t)}</div>`;
   if(b.tipo==="citacao")return `<div class="bl"><blockquote class="cit">“${esc(b.t)}”${b.aut?`<cite>— ${esc(b.aut)}</cite>`:""}</blockquote></div>`;
@@ -1933,7 +1987,7 @@ function desenharPregar(){
   $("preach").innerHTML=h;
   $("preach").style.setProperty("--nf",db.cfg.fonte+"px");
   const c=document.querySelector(".pcont");if(c)c.scrollTop=st0;
-  P.rolled=roll;$("preach").classList.toggle("roll",roll);$("preach").classList.toggle("railoff",!!db.cfg.rail);
+  P.rolled=roll;$("preach").classList.toggle("roll",roll);$("preach").classList.toggle("railoff",!!db.cfg.rail);linkaRefs(document.querySelector(".pcont"));
   if(roll&&c&&n>1)c.onscroll=()=>{
     const lim=c.getBoundingClientRect().top+c.clientHeight*.25;let k=0;
     s.topicos.forEach((x,j)=>{const e=$("tp"+j);if(e&&e.getBoundingClientRect().top<=lim)k=j;});
@@ -2341,6 +2395,10 @@ document.addEventListener("click",e=>{
   else if(a==="tog"){const ja=V.ab.has(v);V.ab=ja?new Set():new Set([v]);V.nop=ja?cur().id:null;rerender();if(!ja)setTimeout(()=>{const e=document.querySelector('.tp[data-t="'+v+'"]');if(e)scrollTo({top:e.getBoundingClientRect().top+scrollY-70,behavior:"smooth"});},30);}
   else if(a==="addt"){const s=cur(),t={id:uid(),titulo:"",ref:"",blocos:[]};s.topicos.push(t);V.ab=new Set([t.id]);salvar();rerender();setTimeout(()=>{const e=document.querySelector('.tp[data-t="'+t.id+'"] .tin');if(e){e.focus();e.scrollIntoView({block:"center",behavior:"smooth"});}},40);}
   else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();if(v==="biblico")abrirPick("bloco",bl.id);else focaBloco(bl.id);}
+  else if(a==="vref")abrirVF(v);
+  else if(a==="vfx"){const e=$("vf");if(e)e.classList.remove("show");VF=null;}
+  else if(a==="vfc"){vfNav(+v);}
+  else if(a==="vfa"){VFS=Math.max(13,Math.min(30,VFS+(+v)*2));const c=$("vfc");if(c)c.style.fontSize=VFS+"px";}
   else if(a==="frec")recuo("rec");
   else if(a==="fbar")recuo("bar");
   else if(a==="railt"){db.cfg.rail=!db.cfg.rail;salvar();$("preach").classList.toggle("railoff",!!db.cfg.rail);}
@@ -2520,7 +2578,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="43";
+const VER="44";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
