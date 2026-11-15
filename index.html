@@ -604,6 +604,17 @@ button.iactx{width:100%;text-align:left}
 .guia ol{margin:10px 0 6px;padding-left:20px;font-size:14px;line-height:1.55}
 .guia li{margin-bottom:4px}
 a.btn{text-decoration:none;color:var(--text);align-items:center}
+.top .av.foto,.av.foto{background-size:cover;background-position:center;background-repeat:no-repeat;color:transparent;border:2px solid var(--gold)}
+.av.grande{width:84px;height:84px;font-size:34px}
+.perf{display:flex;align-items:center;gap:16px;margin:10px 0 14px}
+.perfb{display:flex;flex-direction:column;gap:8px;flex:1}
+.perfb .btn{width:100%;display:flex;justify-content:center}
+.dt{margin:-4px 2px 2px;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.ola{margin:0 2px 16px}
+.ola h2{margin:0;font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1.15}
+.ola h2 span{color:var(--gold)}
+.ola p{margin:4px 0 0;color:var(--muted);font-size:14.5px}
+@media(min-width:700px){.ola h2{font-size:40px}.ola p{font-size:16px}}
 </style>
 </head>
 <body>
@@ -738,7 +749,7 @@ if(!db.semeado&&!db.sermoes.length){
 }
 function ajustar(){
   if(!db||!Array.isArray(db.sermoes))db={sermoes:[],semeado:true};
-  db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,fy:0,fo:0,fr:0,custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
+  db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,fy:0,fo:0,fr:0,foto:"",custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
   db.eventos=(Array.isArray(db.eventos)?db.eventos:[]).filter(e=>e&&typeof e==="object");db.pastas=Array.isArray(db.pastas)?db.pastas:[];
   db.sermoes=db.sermoes.filter(s=>s&&typeof s==="object");
   db.ilus=(Array.isArray(db.ilus)?db.ilus:[]).filter(x=>x&&x.id).map(x=>{x.tit=x.tit||"";x.txt=x.txt||"";x.fonte=x.fonte||"";x.tags=Array.isArray(x.tags)?x.tags:[];x.at=x.at||Date.now();return x;});
@@ -834,7 +845,7 @@ function renderInicio(){
   const dias=e=>{const n=Math.round((new Date(e.data+"T12:00")-new Date(hoje()+"T12:00"))/864e5);return n<=0?"Hoje":n===1?"Amanhã":"em "+n+" dias";};
   const hists=[];db.sermoes.forEach(x=>(x.hist||[]).forEach(y=>hists.push({s:x,h:y})));hists.sort((a,b)=>(b.h.data||"").localeCompare(a.h.data||""));
   const nPreg=hists.length,nPront=db.sermoes.filter(x=>x.status==="pronto").length;
-  let h=`<div class="top"><h1>Púlpito<span>.</span></h1><button class="av" data-a="nome" aria-label="Seu nome">${esc((nm[0]||"P").toUpperCase())}</button></div><p class="sd">${sd}${nm?", "+esc(nm):""} · ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</p><div class="igrid">`;
+  let h=`<div class="top"><h1>Púlpito<span>.</span></h1>${avatarBtn()}</div><p class="dt">${["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"][d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()}</p><div class="ola"><h2>${nm?`${sd}, <span>${esc(nm)}</span>`:sd}</h2><p>Prepare sua mensagem. Deus usa o que você prepara.</p></div><div class="igrid">`;
   if(alvo)h+=`<div class="hero"><small>Próxima pregação</small><h2>${esc(alvo.titulo||"Sem título")}</h2>
     <div class="chips">${evMsg?`<span class="chip">${ico("cal",13)} ${dias(evMsg)}</span>`:""}<span class="chip">${stNome(alvo.status)}</span><span class="chip">${alvo.min} min</span><span class="chip">${alvo.topicos.length} tópicos</span></div>
     ${evMsg?`<div class="meta">${metaEv(evMsg)}</div>`:""}
@@ -1020,9 +1031,27 @@ function abrirSheet(k){
   $("modal").classList.add("show");
 }
 const refazSheet=()=>{if(SHEET&&$("modal").classList.contains("show"))abrirSheet(SHEET);if(V.tela==="lista"&&V.tab==="mais")renderMais();};
+function avatarBtn(){
+  const f=db.cfg.foto,nm=(db.cfg.nome||"").trim();
+  return f?`<button class="av foto" data-a="nome" aria-label="Seu perfil" style="background-image:url(${f})"></button>`:`<button class="av" data-a="nome" aria-label="Seu perfil">${esc((nm[0]||"P").toUpperCase())}</button>`;
+}
+async function fotoProcessa(file){
+  const url=URL.createObjectURL(file),img=new Image();img.src=url;
+  try{await img.decode();}catch(e){URL.revokeObjectURL(url);throw e;}
+  const sz=Math.min(img.naturalWidth,img.naturalHeight),sx=(img.naturalWidth-sz)/2,sy=(img.naturalHeight-sz)/2,c=document.createElement("canvas");
+  c.width=c.height=256;c.getContext("2d").drawImage(img,sx,sy,sz,sz,0,0,256,256);URL.revokeObjectURL(url);
+  return c.toDataURL("image/jpeg",.85);
+}
+function fotoPrev(){
+  const e=$("ft-prev");if(!e)return;const f=db.cfg.foto,nm=(($("nm")||{}).value||db.cfg.nome||"P").trim();
+  e.className="av grande"+(f?" foto":"");e.style.backgroundImage=f?`url(${f})`:"";e.textContent=f?"":(nm[0]||"P").toUpperCase();
+}
 function abrirNome(){
-  $("mb").innerHTML=`<h3>Como devo te chamar?</h3><p class="meta">O nome aparece na tela inicial.</p><input class="in" id="nm" placeholder="Seu nome" maxlength="24" value="${esc(db.cfg.nome||"Bruno")}" style="margin-top:12px"><div class="bar" style="margin-top:14px"><button class="btn gold" data-a="nomeok">Salvar</button><button class="btn" data-a="fechar">Agora não</button></div>`;
-  $("modal").classList.add("show");setTimeout(()=>{const e=$("nm");if(e){e.focus();e.select();}},60);
+  $("mb").innerHTML=`<h3>Seu perfil</h3><div class="perf"><span id="ft-prev" class="av grande"></span><div class="perfb"><label class="btn" for="ft">Escolher foto</label><input type="file" id="ft" accept="image/*" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none"><button class="btn" data-a="fotoremove">Remover foto</button></div></div>
+  <label class="f" for="nm">Como devo te chamar?</label><input class="in" id="nm" placeholder="Seu nome" maxlength="24" value="${esc(db.cfg.nome||"Bruno")}">
+  <p class="meta" style="margin-top:6px">O nome e a foto aparecem na tela inicial e acompanham você nos seus outros aparelhos.</p>
+  <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="nomeok">Salvar</button><button class="btn" data-a="fechar">Fechar</button></div>`;
+  $("modal").classList.add("show");fotoPrev();
 }
 /* ---------- Edição ---------- */
 const cur=()=>sermao(V.id);
@@ -2207,6 +2236,7 @@ document.addEventListener("click",e=>{
   else if(a==="sheet")abrirSheet(v);
   else if(a==="nome")abrirNome();
   else if(a==="nomeok"){db.cfg.nome=$("nm").value.trim();salvar();fechar();render();}
+  else if(a==="fotoremove"){db.cfg.foto="";salvar();fotoPrev();render();}
   else if(a==="addbib")abrirAddBib();
   else if(a==="biblimpa"){
     const cs=db.cfg.custom||[],manter=new Map();
@@ -2342,6 +2372,14 @@ document.addEventListener("change",e=>{
   if(e.target.dataset&&e.target.dataset.b==="ref"&&V.tela==="edit"){const t=achaT(e.target),bl=t.blocos.find(x=>x.id===e.target.closest("[data-bid]").dataset.bid),tx=textoRef(bl.ref);if(tx&&!bl.t){bl.t=tx;salvar();rerender();}}
 });
 function input(){}
+document.addEventListener("change",async e=>{
+  const t=e.target;
+  if(t&&t.id==="ft"&&t.files&&t.files[0]){
+    try{db.cfg.foto=await fotoProcessa(t.files[0]);salvar();fotoPrev();render();toast("Foto atualizada",1800);}
+    catch(x){toast("Não consegui abrir essa imagem. Tente outra (JPG ou PNG).",2800);}
+    t.value="";
+  }
+});
 document.addEventListener("focusin",e=>{if(e.target&&e.target.id==="ia-t"){clearTimeout(iaKb.t);document.body.classList.add("ia-kb");}});
 document.addEventListener("focusout",e=>{if(e.target&&e.target.id==="ia-t"){clearTimeout(iaKb.t);iaKb.t=setTimeout(()=>document.body.classList.remove("ia-kb"),300);}});
 function iaKb(){}
@@ -2386,12 +2424,12 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="40";
+const VER="41";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
 const hsh=o=>{const r=Object.assign({},o);delete r.u;const t=JSON.stringify(r);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
-const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr};};
+const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr,fy:c.fy||0,fo:c.fo||0,fr:c.fr||0,foto:c.foto||""};};
 function paraLixeira(o){db.lixeira=(db.lixeira||[]).filter(x=>x.id!==o.id);db.lixeira.unshift(Object.assign(JSON.parse(JSON.stringify(o)),{delAt:Date.now()}));db.lixeira=db.lixeira.slice(0,40);}
 function syncTouch(){
   const m=syncMeta(),now=Date.now(),vistos=new Set();
@@ -2414,7 +2452,7 @@ function syncApply(){
   SY.rq.forEach(r=>{
     const id=r.id;
     if(id==="_cfg"){
-      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
+      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr","fy","fo","fr","foto"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
       m.p._cfg=Math.max(m.p._cfg===undefined?-1:m.p._cfg,r.u);return;
     }
     const loc=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||(db.ilus||[]).find(x=>x.id===id);
