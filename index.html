@@ -2006,7 +2006,7 @@ function atualizar(){
   const el=elapsed(),rest=P.total-el,f=fase(rest,P.total),d=new Date();
   if(P.fase!==null&&P.t0&&RANK[f]>RANK[P.fase])aviso(f);
   P.fase=f;
-  $("preach").className="show ph-"+f+(f==="over"?" over":"")+(P.roll?" roll":"");
+  $("preach").className="show ph-"+f+(f==="over"?" over":"")+(P.roll?" roll":"")+(db.cfg.rail?" railoff":"");
   $("hora").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
   $("time").textContent=f==="over"?"+"+fmt(-rest):(db.cfg.modo==="regressivo"?fmt(rest):fmt(el));
   const tm=$("tmark");if(tm)tm.style.left=Math.min(100,el/P.total*100)+"%";
@@ -2584,7 +2584,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="46";
+const VER="47";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
