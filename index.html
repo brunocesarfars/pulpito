@@ -683,6 +683,8 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 .vl{font-size:12px;color:var(--gold);padding:0 6px;text-decoration:underline;margin-left:4px}
 @media (orientation:landscape) and (min-width:641px){#vf{width:min(400px,38vw);right:auto;left:14px}}
 #preach,#preach *{touch-action:pan-y}
+#preach.roll.show{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"bar" "prog" "cont" "sheet"!important}
+#preach.roll .pcont{grid-area:cont}
 </style>
 </head>
 <body>
@@ -1993,7 +1995,7 @@ function desenharPregar(){
   $("preach").innerHTML=h;
   $("preach").style.setProperty("--nf",db.cfg.fonte+"px");
   const c=document.querySelector(".pcont");if(c)c.scrollTop=st0;
-  P.rolled=roll;$("preach").classList.toggle("roll",roll);$("preach").classList.toggle("railoff",!!db.cfg.rail);linkaRefs(document.querySelector(".pcont"));
+  P.rolled=roll;$("preach").classList.toggle("roll",roll);$("preach").classList.toggle("railoff",!!db.cfg.rail&&!roll);linkaRefs(document.querySelector(".pcont"));
   if(roll&&c&&n>1)c.onscroll=()=>{
     const lim=c.getBoundingClientRect().top+c.clientHeight*.25;let k=0;
     s.topicos.forEach((x,j)=>{const e=$("tp"+j);if(e&&e.getBoundingClientRect().top<=lim)k=j;});
@@ -2007,7 +2009,7 @@ function atualizar(){
   const el=elapsed(),rest=P.total-el,f=fase(rest,P.total),d=new Date();
   if(P.fase!==null&&P.t0&&RANK[f]>RANK[P.fase])aviso(f);
   P.fase=f;
-  $("preach").className="show ph-"+f+(f==="over"?" over":"")+(P.roll?" roll":"")+(db.cfg.rail?" railoff":"");
+  $("preach").className="show ph-"+f+(f==="over"?" over":"")+(P.roll?" roll":"")+(db.cfg.rail&&!P.roll?" railoff":"");
   $("hora").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
   $("time").textContent=f==="over"?"+"+fmt(-rest):(db.cfg.modo==="regressivo"?fmt(rest):fmt(el));
   const tm=$("tmark");if(tm)tm.style.left=Math.min(100,el/P.total*100)+"%";
@@ -2408,7 +2410,7 @@ document.addEventListener("click",e=>{
   else if(a==="vfa"){VFS=Math.max(13,Math.min(30,VFS+(+v)*2));const c=$("vfc");if(c)c.style.fontSize=VFS+"px";}
   else if(a==="frec")recuo("rec");
   else if(a==="fbar")recuo("bar");
-  else if(a==="railt"){db.cfg.rail=!db.cfg.rail;salvar();$("preach").classList.toggle("railoff",!!db.cfg.rail);}
+  else if(a==="railt"){db.cfg.rail=!db.cfg.rail;salvar();$("preach").classList.toggle("railoff",!!db.cfg.rail&&!P.roll);}
   else if(a==="bmais"){const k=b.closest(".bk");if(k)k.classList.toggle("mais");}
   else if(a==="tmais"){const m=b.closest(".tpb").querySelector(".tmenu");if(m)m.classList.toggle("ver");}
   else if(a==="ins")inserirBloco(v);
@@ -2596,7 +2598,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="50";
+const VER="51";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
