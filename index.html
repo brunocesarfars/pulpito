@@ -589,11 +589,18 @@ button.iactx{width:100%;text-align:left}
 .stp button{width:36px;height:36px;border-radius:11px;background:var(--card2);border:1px solid var(--line);font-size:19px;font-weight:700;line-height:1}
 .stp b{min-width:30px;text-align:center;font-size:15px}
 .opcs .rw:first-child{border-top:0}
+.ideiac{margin:0 0 18px;padding:14px 16px;border-radius:16px;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--gold)}
+.ideiac small{display:block;font-size:11px;letter-spacing:.1em;font-weight:700;color:var(--gold);margin-bottom:4px}
+.ideiac p{margin:0;font-style:italic;font-size:calc(var(--nf) - 2px);line-height:1.5}
+.gbar{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:120;display:none;gap:10px;padding:8px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.gbar.show{display:flex}
+.gbar button{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);font-size:15px;color:var(--text)}
+.gbar .c1{background:#f5d34a}.gbar .c2{background:#5ec882}.gbar .c3{background:#f078a0}.gbar .c0{background:var(--card2)}
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
-<div id="preach" aria-live="off"></div>
+<div id="preach" aria-live="off"></div><div id="gbar" class="gbar" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()"><button data-a="gp" data-v="1" class="c1" aria-label="Grifo amarelo"></button><button data-a="gp" data-v="2" class="c2" aria-label="Grifo verde"></button><button data-a="gp" data-v="3" class="c3" aria-label="Grifo rosa"></button><button data-a="gp" data-v="0" class="c0" aria-label="Tirar grifo">✕</button></div>
 <div class="modal" id="modal"><div class="mb" id="mb"></div></div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -1190,7 +1197,7 @@ function ajustar(){
   db.ilus=(Array.isArray(db.ilus)?db.ilus:[]).filter(x=>x&&x.id).map(x=>{x.tit=x.tit||"";x.txt=x.txt||"";x.fonte=x.fonte||"";x.tags=Array.isArray(x.tags)?x.tags:[];x.at=x.at||Date.now();return x;});
   db.lixeira=(Array.isArray(db.lixeira)?db.lixeira:[]).filter(x=>x&&x.id&&Date.now()-(x.delAt||0)<30*864e5);
   db.sermoes.forEach(s=>{if(!s.id)s.id=uid();
-    s.serie=typeof s.serie==="string"?s.serie:"";s.serieN=+s.serieN||0;s.status=s.status||"rascunho";s.modo=s.modo==="rolagem"?"rolagem":"topicos";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
+    s.serie=typeof s.serie==="string"?s.serie:"";s.ideia=typeof s.ideia==="string"?s.ideia:"";s.serieN=+s.serieN||0;s.status=s.status||"rascunho";s.modo=s.modo==="rolagem"?"rolagem":"topicos";s.base=s.base||"";s.hist=s.hist||[];s.topicos=s.topicos||[];s.min=s.min||30;s.at=s.at||Date.now();s.fav=!!s.fav;s.aberto=s.aberto||0;
     s.topicos=(Array.isArray(s.topicos)?s.topicos:[]).filter(t=>t&&typeof t==="object");
     s.topicos.forEach(t=>{
       if(!t.id)t.id=uid();
@@ -1503,6 +1510,8 @@ function renderEdit(y){
   <label class="f" for="f-assunto">Assunto</label>
   <input class="in" id="f-assunto" list="dl-a" placeholder="Ex.: Confiança em Deus nas crises" value="${esc(s.assunto)}">
   <datalist id="dl-a">${assuntos.map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
+  <label class="f" for="f-ideia">Ideia central</label>
+  <textarea class="in" id="f-ideia" rows="3" placeholder="A frase que resume a mensagem. Aparece em destaque ao pregar.">${esc(s.ideia||"")}</textarea>
   <label class="f" for="f-serie">Série</label>
   <div class="row"><div style="flex:2"><input class="in" id="f-serie" list="dl-s" placeholder="Ex.: Romanos" value="${esc(s.serie||"")}"></div><div style="flex:1"><input class="in" id="f-serien" type="number" min="1" inputmode="numeric" placeholder="Nº" value="${s.serieN||""}" aria-label="Número na série"></div></div>
   <datalist id="dl-s">${seriesTodas().map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
@@ -2164,10 +2173,29 @@ function grifar(n){
 function blocoPreg(b){
   if(b.tipo==="biblico")return `<div class="bl bib"><div class="bt">📖 ${esc(b.ref)}</div>${(b.t||textoRef(b.ref))?`<div>${esc(b.t||textoRef(b.ref))}</div>`:""}</div>`;
   if(b.tipo==="lista")return `<div class="bl"><ul>${b.t.split("\n").filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
-  if(b.tipo==="texto")return `<div class="bl${b.rec?" rec":""}">${limpa(b.t)}</div>`;
+  if(b.tipo==="texto")return `<div class="bl${b.rec?" rec":""}" data-b="${b.id}">${limpa(b.t)}</div>`;
   if(b.tipo==="citacao")return `<div class="bl"><blockquote class="cit">“${esc(b.t)}”${b.aut?`<cite>— ${esc(b.aut)}</cite>`:""}</blockquote></div>`;
   return `<div class="bl obs">${esc(b.t)}</div>`;
 }
+function grifarPreg(n){
+  const sel=getSelection();if(!P||!sel.rangeCount||sel.isCollapsed)return;
+  const r=sel.getRangeAt(0),an=r.commonAncestorContainer,el=an.nodeType===1?an:an.parentElement,bl=el&&el.closest(".bl[data-b]");
+  if(!bl){toast("Grife dentro de um texto da mensagem");return;}
+  const solta=m=>m.replaceWith(...m.childNodes);
+  bl.querySelectorAll("mark").forEach(m=>{if(r.intersectsNode(m))solta(m);});
+  if(n>0){const m=document.createElement("mark");m.className="g"+n;m.appendChild(r.extractContents());r.insertNode(m);}
+  bl.normalize();sel.removeAllRanges();
+  const s0=sermao(P.id);let b=null;s0.topicos.forEach(t=>t.blocos.forEach(x=>{if(x.id===bl.dataset.b)b=x;}));
+  if(b){b.t=limpa(bl.innerHTML);s0.at=Date.now();salvar();}
+  document.getElementById("gbar").classList.remove("show");
+}
+document.addEventListener("selectionchange",()=>{
+  const g=document.getElementById("gbar");if(!g)return;
+  const sel=getSelection();
+  if(!P||!sel.rangeCount||sel.isCollapsed){g.classList.remove("show");return;}
+  const an=sel.getRangeAt(0).commonAncestorContainer,el=an.nodeType===1?an:an.parentElement;
+  g.classList.toggle("show",!!(el&&el.closest(".bl[data-b]")));
+});
 function bvDe(s,t){
   let bv=t&&(t.blocos.find(b=>b.tipo==="biblico"&&(b.t||b.ref))||(t.ref?{ref:t.ref,t:""}:null));
   if(!bv&&s.base)bv={ref:s.base,t:""};
@@ -2188,8 +2216,9 @@ function desenharPregar(){
   <div class="pcont"><div class="pc">`;
   if(!t)h+=`<div class="vz">Esta mensagem ainda não tem tópicos.</div>`;
   else{
-    if(roll)h+=`${s.titulo?`<h1>${esc(s.titulo)}</h1>`:""}`+s.topicos.map((x,k)=>`${n>1||(x.titulo&&x.titulo!=="Texto do sermão")?`<h2 class="rh" id="tp${k}">${n>1?(k+1)+". ":""}${esc(x.titulo||"")}</h2>`:`<span id="tp${k}"></span>`}${x.blocos.map(blocoPreg).join("")}`).join("");
-    else h+=`<h1>${P.i+1}. ${esc(t.titulo)}</h1>${P.i===0&&s.titulo?`<div class="sr">${esc(s.titulo)}</div>`:`<div class="sr"></div>`}${t.blocos.map(blocoPreg).join("")||`<div class="vz">Sem anotações neste tópico.</div>`}`;
+    const ide=s.ideia&&s.ideia.trim()?`<div class="ideiac"><small>IDEIA CENTRAL</small><p>${esc(s.ideia.trim())}</p></div>`:"";
+    if(roll)h+=`${s.titulo?`<h1>${esc(s.titulo)}</h1>`:""}${ide}`+s.topicos.map((x,k)=>`${n>1||(x.titulo&&x.titulo!=="Texto do sermão")?`<h2 class="rh" id="tp${k}">${n>1?(k+1)+". ":""}${esc(x.titulo||"")}</h2>`:`<span id="tp${k}"></span>`}${x.blocos.map(blocoPreg).join("")}`).join("");
+    else h+=`<h1>${P.i+1}. ${esc(t.titulo)}</h1>${P.i===0&&s.titulo?`<div class="sr">${esc(s.titulo)}</div>`:`<div class="sr"></div>`}${P.i===0?ide:""}${t.blocos.map(blocoPreg).join("")||`<div class="vz">Sem anotações neste tópico.</div>`}`;
   }
   h+=`</div></div>`;
   if(bv)h+=`<button class="sheet" id="psh" data-a="psheet">${sheetIn(bv)}</button>`;
@@ -2583,6 +2612,7 @@ document.addEventListener("click",e=>{
     s0.at=Date.now();V.ab.add(ant.id);salvar();rerender();toast("Tópicos juntados.",2000);
   }
   else if(a==="bdel"){const t=achaT(b);t.blocos=t.blocos.filter(x=>x.id!==v);salvar();rerender();}
+  else if(a==="gp"){grifarPreg(+v);}
   else if(a==="fmt"){if(/^g\d$/.test(v))grifar(+v[1]);else document.execCommand(v);}
   else if(a==="modoP"){const s=cur();s.modo=v==="rolagem"?"rolagem":"topicos";s.at=Date.now();salvar();rerender();}
   else if(a==="impmodo"){IMP.manter=v==="arquivo";document.querySelectorAll("[data-a=impmodo]").forEach(x=>x.classList.toggle("on",x.dataset.v===v));}
@@ -2678,6 +2708,7 @@ document.addEventListener("input",e=>{
   if(t.id==="f-titulo")s.titulo=t.value;
   else if(t.id==="f-base"){s.base=t.value;$("hint-base").textContent=livroDe(t.value)||"";}
   else if(t.id==="f-assunto")s.assunto=t.value;
+  else if(t.id==="f-ideia")s.ideia=t.value;
   else if(t.id==="f-serie")s.serie=t.value;
   else if(t.id==="f-serien")s.serieN=Math.max(0,+t.value||0);
   else if(t.id==="f-pasta")s.pasta=t.value;
@@ -2705,7 +2736,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="35";
+const VER="36";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
