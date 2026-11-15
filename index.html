@@ -597,6 +597,8 @@ button.iactx{width:100%;text-align:left}
 .gbar.show{display:flex}
 .gbar button{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);font-size:15px;color:var(--text)}
 .gbar .c1{background:#f5d34a}.gbar .c2{background:#5ec882}.gbar .c3{background:#f078a0}.gbar .c0{background:var(--card2)}
+.dot{display:block;width:14px;height:14px;border-radius:50%}
+.dot.y{background:#e6b800}.dot.o{background:#f07a1a}.dot.r{background:#e5484d}
 </style>
 </head>
 <body>
@@ -731,7 +733,7 @@ if(!db.semeado&&!db.sermoes.length){
 }
 function ajustar(){
   if(!db||!Array.isArray(db.sermoes))db={sermoes:[],semeado:true};
-  db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
+  db.cfg=Object.assign({fonte:19,som:true,modo:"regressivo",bf:19,dest:{},marca:null,ult:null,tema:"auto",versao:"acf",ultBackup:0,fy:0,fo:0,fr:0,custom:[],nome:"",nomeAsk:false,agr:"todos"},db.cfg||{});
   db.eventos=(Array.isArray(db.eventos)?db.eventos:[]).filter(e=>e&&typeof e==="object");db.pastas=Array.isArray(db.pastas)?db.pastas:[];
   db.sermoes=db.sermoes.filter(s=>s&&typeof s==="object");
   db.ilus=(Array.isArray(db.ilus)?db.ilus:[]).filter(x=>x&&x.id).map(x=>{x.tit=x.tit||"";x.txt=x.txt||"";x.fonte=x.fonte||"";x.tags=Array.isArray(x.tags)?x.tags:[];x.at=x.at||Date.now();return x;});
@@ -1007,7 +1009,7 @@ function abrirSheet(k){
   else if(k==="lixeira"){const L=db.lixeira||[];h=`<h3>Lixeira</h3><p class="meta" style="margin-bottom:12px">Sermões excluídos ficam aqui por 30 dias.</p>`+(L.length?`<div class="rows">${L.map(x=>linha(ico("up",18),esc(x.titulo||"Sem título"),"Excluído "+new Date(x.delAt).toLocaleDateString("pt-BR")+" · toque para restaurar","lixrest",x.id)).join("")}</div><div class="bar" style="margin-top:10px"><button class="btn danger" data-a="lixvazia">Esvaziar lixeira</button></div>`:`<p class="meta">Nada por aqui.</p>`);}
   else if(k==="tema")h=`<h3>Aparência</h3>${segV([["auto","Automático"],["claro","Claro"],["escuro","Escuro"]],c.tema,"tema")}<p class="meta">Automático segue o tema do celular.</p>`;
   else if(k==="biblia")h=`<h3>Bíblia</h3><label class="f" style="margin-top:4px">Versão</label>${segV(Object.keys(versList()).map(x=>[x,versList()[x].n]),ver,"versao")}<p class="meta">${(versList()[ver]||VERS.acf).d}</p><div class="rows" style="margin-top:12px">${linha(ico("plus",18),"Minhas Bíblias","Adicionar ou excluir NVI, ARA, NAA","addbib")}${linha(ico("type",18),"Letra na leitura","Agora "+c.bf+" px","nada",undefined,`<span class="step"><span data-a="bmenos2">−</span><span data-a="bmais2">+</span></span>`)}</div>`;
-  else if(k==="preg")h=`<h3>Pregação</h3><div class="rows">${linha(ico("bell",18),"Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha(ico("timer",18),"Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha(ico("type",18),"Letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>`;
+  else if(k==="preg")h=`<h3>Pregação</h3><div class="rows">${linha(ico("bell",18),"Sinal ao mudar de cor","Som e vibração","som2",undefined,sw(c.som))}${linha(ico("timer",18),"Contagem regressiva","Desligado mostra o tempo decorrido","modo2",undefined,sw(c.modo==="regressivo"))}${linha(ico("palette",18),"Cores do cronômetro","Em que minuto muda de cor","cores")}${linha(ico("type",18),"Letra ao pregar","Agora "+c.fonte+" px","nada",undefined,`<span class="step"><span data-a="f2menos">−</span><span data-a="f2mais">+</span></span>`)}</div>`;
   else h=`<h3>Púlpito</h3><p class="meta" style="margin-bottom:6px">Versão ${VER}</p><div class="rows" style="margin-bottom:10px">${linha(ico("down",18),"Verificar atualização","Procura uma versão mais nova","chkupd")}</div><p class="meta">Seus sermões ficam guardados neste aparelho. Faça cópia de segurança de vez em quando, principalmente antes de limpar os dados do navegador.</p><p class="meta" style="margin-top:8px">Bíblias: ACF, KJV e BBE incluídas. Outras versões você adiciona do seu próprio arquivo.</p>`;
   $("mb").innerHTML=h+`<div class="bar" style="margin-top:14px"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
@@ -1677,11 +1679,16 @@ function abrirVincular(){
 let P=null,tick=null,wake=null,ac=null,REG=null;
 const RANK={green:0,yellow:1,orange:2,red:3,over:4};
 const fmt=ms=>{ms=Math.max(0,Math.ceil(ms/1000));const h=Math.floor(ms/3600),m=Math.floor(ms%3600/60),s=ms%60;return h?`${h}:${pad(m)}:${pad(s)}`:`${pad(m)}:${pad(s)}`;};
+function limFases(total){
+  const c=db.cfg,m=60000;
+  return{y:c.fy>0?c.fy*m:total/3,o:c.fo>0?c.fo*m:total/6,r:c.fr>0?c.fr*m:total/15};
+}
 function fase(rest,total){
   if(rest<=0)return"over";
-  if(rest<=total/15)return"red";
-  if(rest<=total/6)return"orange";
-  if(rest<=total/3)return"yellow";
+  const l=limFases(total);
+  if(rest<=l.r)return"red";
+  if(rest<=l.o)return"orange";
+  if(rest<=l.y)return"yellow";
   return"green";
 }
 function elapsed(){return P.acc+(P.t0?Date.now()-P.t0:0);}
@@ -1793,6 +1800,15 @@ function abrirListaT(){
   $("mb").innerHTML=`<h3>Tópicos</h3><div class="lista">${s.topicos.map((t,i)=>`<button data-a="irt" data-v="${i}">${i+1}. ${esc(t.titulo)}${t.ref?` <span class="rf">${esc(t.ref)}</span>`:""}</button>`).join("")}</div><div class="bar"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
+function abrirCores(){
+  const tot=P?P.total:30*60000,l=limFases(tot),c=db.cfg;
+  const min=v=>Math.max(1,Math.round(v/60000));
+  const cor=(k,nome,cl,val,auto)=>`<div class="rw"><span class="ic"><i class="dot ${cl}"></i></span><span class="rt2"><b>${nome}</b><small>Quando faltar ${val} min${auto?" (automático)":""}</small></span><span class="stp"><button data-a="corm" data-v="${k}" aria-label="Menos">−</button><b>${val}</b><button data-a="corp" data-v="${k}" aria-label="Mais">+</button></span></div>`;
+  $("mb").innerHTML=`<h3>Cores do cronômetro</h3><p class="meta" style="margin-bottom:10px">Escolha em que minuto o cronômetro muda de cor. Automático divide o tempo da mensagem em partes proporcionais.</p>
+  <div class="rows opcs">${cor("y","Amarelo","y",min(l.y),!c.fy)}${cor("o","Laranja","o",min(l.o),!c.fo)}${cor("r","Vermelho","r",min(l.r),!c.fr)}</div>
+  <div class="bar" style="margin-top:14px"><button class="btn" data-a="coresauto">Automático</button><button class="btn gold" data-a="coresvolta">Voltar</button></div>`;
+  $("modal").classList.add("show");
+}
 function abrirAjustes(){
   const sm=sermao(P.id)||{},esc0=document.documentElement.dataset.tema||"escuro",roll=sm.modo==="rolagem";
   const tg=on=>`<span class="tgl ${on?"on":""}"><i></i></span>`;
@@ -1805,6 +1821,7 @@ function abrirAjustes(){
   ${dv(ico("timer",18),"Tempo da mensagem","Total previsto em minutos",stp("menos",Math.round(P.total/60000),"","mais"))}
   ${linha(ico("bell",18),"Sinal sonoro",db.cfg.som?"Ligado":"Desligado","som",undefined,tg(db.cfg.som))}
   ${linha(ico("clock",18),"Cronômetro",db.cfg.modo==="regressivo"?"Contagem regressiva":"Tempo decorrido","modo",undefined,tg(db.cfg.modo==="regressivo"))}
+  ${linha(ico("palette",18),"Cores do cronômetro","Quando muda de cor","cores")}
   ${linha(ico("hl",18),"Editar mensagem","Alterar tópicos e textos","preditar")}
   ${linha(ico("pdf",18),"Exportar para PDF","Gerar o esboço em PDF","ppdf")}
   ${linha(ico("arrow",18),"Reiniciar tempo","Zera o cronômetro","zerar")}
@@ -2152,6 +2169,19 @@ document.addEventListener("click",e=>{
   }
   else if(a==="bdel"){const t=achaT(b);t.blocos=t.blocos.filter(x=>x.id!==v);salvar();rerender();}
   else if(a==="gp"){grifarPreg(+v);}
+  else if(a==="cores"){abrirCores();}
+  else if(a==="corp"||a==="corm"){
+    const c=db.cfg,K={y:"fy",o:"fo",r:"fr"},tot=P?P.total:30*60000,l=limFases(tot),cur={y:Math.max(1,Math.round(l.y/60000)),o:Math.max(1,Math.round(l.o/60000)),r:Math.max(1,Math.round(l.r/60000))};
+    cur.r=Math.max(1,cur.r);cur.o=Math.max(cur.o,cur.r+1);cur.y=Math.max(cur.y,cur.o+1);
+    const d=a==="corp"?1:-1;
+    if(v==="y")cur.y=Math.min(120,Math.max(cur.o+1,cur.y+d));
+    else if(v==="o")cur.o=Math.min(cur.y-1,Math.max(cur.r+1,cur.o+d));
+    else cur.r=Math.min(cur.o-1,Math.max(1,cur.r+d));
+    c.fy=cur.y;c.fo=cur.o;c.fr=cur.r;
+    salvar();if(P)atualizar();abrirCores();
+  }
+  else if(a==="coresauto"){db.cfg.fy=0;db.cfg.fo=0;db.cfg.fr=0;salvar();if(P)atualizar();abrirCores();}
+  else if(a==="coresvolta"){if(P)abrirAjustes();else if(SHEET)abrirSheet(SHEET);else fechar();}
   else if(a==="fmt"){if(/^g\d$/.test(v))grifar(+v[1]);else document.execCommand(v);}
   else if(a==="modoP"){const s=cur();s.modo=v==="rolagem"?"rolagem":"topicos";s.at=Date.now();salvar();rerender();}
   else if(a==="impmodo"){IMP.manter=v==="arquivo";document.querySelectorAll("[data-a=impmodo]").forEach(x=>x.classList.toggle("on",x.dataset.v===v));}
@@ -2275,7 +2305,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="37";
+const VER="38";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
