@@ -1003,7 +1003,7 @@ function mapaBiblico(){
 }
 function abrirSheet(k){
   SHEET=k;const c=db.cfg,ver=c.versao||"acf";let h="";
-  if(k==="dados")h=`<h3>Cópia de segurança</h3><p class="meta" style="margin-bottom:12px">${ultBk()}. O arquivo guarda todos os seus sermões e a agenda.</p><div class="rows">${linha(ico("down",18),"Baixar cópia","Salva um arquivo no aparelho","baixar")}${linha(ico("up",18),"Restaurar cópia","De um arquivo salvo","restaurar")}</div>`;
+  if(k==="dados")h=`<h3>Cópia de segurança</h3><p class="meta" style="margin-bottom:12px">${ultBk()}. O arquivo guarda todos os seus sermões e a agenda.</p><div class="rows">${linha(ico("down",18),"Baixar backup (.json)","Salva o arquivo no aparelho","baixar")}${linha(ico("share",18),"Salvar no Drive ou compartilhar","Escolha o Google Drive na lista de apps","bkshare")}${linha(ico("up",18),"Restaurar de um arquivo","Escolha um backup .json salvo","restaurar")}${linha(ico("clock",18),"Cópias automáticas","Uma por semana, guardadas neste aparelho","snaps")}</div>`;
   else if(k==="conta"){h=contaSheet();if(!SY.ready)fbCarrega().catch(()=>{});}
   else if(k==="mapa")h=mapaBiblico();
   else if(k==="lixeira"){const L=db.lixeira||[];h=`<h3>Lixeira</h3><p class="meta" style="margin-bottom:12px">Sermões excluídos ficam aqui por 30 dias.</p>`+(L.length?`<div class="rows">${L.map(x=>linha(ico("up",18),esc(x.titulo||"Sem título"),"Excluído "+new Date(x.delAt).toLocaleDateString("pt-BR")+" · toque para restaurar","lixrest",x.id)).join("")}</div><div class="bar" style="margin-top:10px"><button class="btn danger" data-a="lixvazia">Esvaziar lixeira</button></div>`:`<p class="meta">Nada por aqui.</p>`);}
@@ -1998,6 +1998,36 @@ function baixarBackup(){
   if(V.tela==="lista"&&(V.tab==="mais"||V.tab==="inicio"))render();
   refazSheet();
 }
+async function compartilharBackup(){
+  const f=new File([JSON.stringify(db)],"pulpito-backup-"+hoje()+".json",{type:"application/json"});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Backup do Púlpito"});db.cfg.ultBackup=Date.now();salvar();toast("Backup enviado",2400);refazSheet();return;}}
+  catch(e){if(e&&e.name==="AbortError")return;}
+  baixarBackup();
+}
+/* Cópias automáticas (banco separado, não sincroniza) */
+function snapDb(){return new Promise((ok,err)=>{const r=indexedDB.open("pulpito-snap",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
+function snapReq(d,modo,f){return new Promise((ok,err)=>{const t=d.transaction("s",modo),st=t.objectStore("s"),q=f(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>err(t.error);});}
+async function snapSalva(motivo){
+  try{
+    if(!db.sermoes.length&&!db.eventos.length)return false;
+    const d=await snapDb(),k=Date.now();
+    await snapReq(d,"readwrite",st=>st.put({t:k,m:motivo||"auto",n:db.sermoes.length,e:db.eventos.length,j:JSON.stringify(db)},k));
+    const ks=(await snapReq(d,"readonly",st=>st.getAllKeys())||[]).sort((a,b)=>b-a);
+    if(ks.length>8)await snapReq(d,"readwrite",st=>{ks.slice(8).forEach(x=>st.delete(x));});
+    d.close();try{localStorage.setItem("pulpito.snap",String(k));}catch(e){}
+    return true;
+  }catch(e){return false;}
+}
+async function snapLista(){
+  try{const d=await snapDb(),all=await snapReq(d,"readonly",st=>st.getAll());d.close();return(all||[]).sort((a,b)=>b.t-a.t);}catch(e){return[];}
+}
+async function abrirSnaps(){
+  const l=await snapLista(),fm=t=>new Date(t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+  $("mb").innerHTML=`<h3>Cópias automáticas</h3><p class="meta" style="margin-bottom:10px">O Púlpito guarda uma cópia por semana, e outra antes de substituir tudo. Ficam só neste aparelho. Guardamos as 8 mais recentes.</p>
+  <div class="rows">${l.length?l.map(x=>`<button class="rw" data-a="snapr" data-v="${x.t}"><span class="ic">${ico("clock",18)}</span><span class="rt2"><b>${fm(x.t)}</b><small>${x.n} sermão(ões) · ${x.e} evento(s) · ${x.m==="auto"?"automática":x.m==="manual"?"manual":"antes de restaurar"}</small></span><span class="chev">›</span></button>`).join(""):`<p class="meta" style="padding:14px">Ainda não há cópias automáticas.</p>`}</div>
+  <div class="bar" style="margin-top:14px"><button class="btn" data-a="snapnow">Fazer cópia agora</button><button class="btn gold" data-a="fechar">Fechar</button></div>`;
+  $("modal").classList.add("show");
+}
 let RESTAURO=null;
 function abrirRestaurar(){
   RESTAURO=null;
@@ -2017,8 +2047,9 @@ function lerRestauro(txt){
     <div class="bar" style="margin-top:0"><button class="btn gold" data-a="rest-add">Adicionar aos atuais</button><button class="btn danger" data-a="rest-sub">Substituir tudo</button></div>`;
   }catch(e){toast("Arquivo inválido. Use uma cópia gerada pelo Púlpito.",2800);}
 }
-function aplicarRestauro(sub){
+async function aplicarRestauro(sub){
   const d=RESTAURO;if(!d)return;
+  if(sub)await snapSalva("antes");
   if(sub){db=d;}
   else{
     const ids=new Set(db.sermoes.map(s=>s.id));
@@ -2113,6 +2144,10 @@ document.addEventListener("click",e=>{
   }
   else if(a==="rest-txt"){lerRestauro($("rest-txt").value);}
   else if(a==="baixar")baixarBackup();
+  else if(a==="bkshare")compartilharBackup();
+  else if(a==="snaps")abrirSnaps();
+  else if(a==="snapnow"){snapSalva("manual").then(ok=>{toast(ok?"Cópia feita":"Não consegui fazer a cópia",2200);abrirSnaps();});}
+  else if(a==="snapr"){snapLista().then(l=>{const x=l.find(y=>String(y.t)===String(v));if(!x)return;abrirRestaurar();lerRestauro(x.j);});}
   else if(a==="restaurar")abrirRestaurar();
   else if(a==="rest-sub"||a==="rest-add")aplicarRestauro(a==="rest-sub");
   else if(a==="bmais2"||a==="bmenos2"){db.cfg.bf=Math.min(34,Math.max(14,db.cfg.bf+(a==="bmais2"?2:-2)));salvar();refazSheet();}
@@ -2305,7 +2340,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="38";
+const VER="39";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
@@ -2496,6 +2531,7 @@ document.addEventListener("visibilitychange",()=>{
   else{syncPush();if(SY.fs&&Date.now()-(SY.rs||0)>15000)syncOuve(SY.user,false);}
 });
 window.addEventListener("pagehide",()=>{if(SY.user){clearTimeout(SY.pushT);syncPush();}});
+setTimeout(()=>{let u=0;try{u=+localStorage.getItem("pulpito.snap")||0;}catch(e){}if(Date.now()-u>6048e5)snapSalva("auto");},5000);
 try{if(JSON.parse(localStorage.getItem("pulpito.sync")||"{}").logado&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
 render();carregaPropriasBiblias();
 if(!db.cfg.nome&&!db.cfg.nomeAsk){db.cfg.nomeAsk=true;salvar();setTimeout(abrirNome,700);}
