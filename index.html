@@ -2576,6 +2576,17 @@ document.addEventListener("input",e=>{
 /* Deslizar para trocar de tópico */
 let tx=null;
 /* Sem deslizar para trocar de tópico; sem zoom de pinça (o zoom é só na letra) */
+/* Rolar com 1 ou 2 dedos na pregação, sem nunca dar zoom */
+let y2=null;
+document.addEventListener("touchstart",e=>{y2=(P&&e.touches.length===2)?(e.touches[0].clientY+e.touches[1].clientY)/2:null;},{passive:true});
+document.addEventListener("touchmove",e=>{
+  if(!P||e.touches.length<2)return;
+  e.preventDefault();
+  const y=(e.touches[0].clientY+e.touches[1].clientY)/2;
+  if(y2!==null){const c=document.querySelector(".pcont"),d=y2-y;if(c&&c.scrollHeight>c.clientHeight+2)c.scrollTop+=d;else scrollBy(0,d);}
+  y2=y;
+},{passive:false});
+document.addEventListener("touchend",e=>{if(e.touches.length<2)y2=null;},{passive:true});
 ["gesturestart","gesturechange","gestureend"].forEach(g=>document.addEventListener(g,e=>e.preventDefault()));
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){if($("modal").classList.contains("show"))fechar();else if(P)sairPregar();}
@@ -2585,7 +2596,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="48";
+const VER="49";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
