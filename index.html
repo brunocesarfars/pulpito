@@ -615,6 +615,46 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 .ola h2 span{color:var(--gold)}
 .ola p{margin:4px 0 0;color:var(--muted);font-size:14.5px}
 @media(min-width:700px){.ola h2{font-size:40px}.ola p{font-size:16px}}
+
+/* ---- Editor estilo documento (v42) ---- */
+.estc{display:flex;align-items:center;gap:10px;font-size:13px;margin-bottom:6px}
+.estc b{font-family:var(--display);font-size:18px}
+.estc .estb{flex:1;height:5px;margin:0}
+.estc.alto .estb i{background:var(--red)}.estc.baixo .estb i{background:var(--orange)}.estc.vazio .estb i{background:var(--muted)}
+.chip.detb{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold-line);cursor:pointer}
+.tp.open{background:none;border:0;border-radius:0;overflow:visible}
+.tp.open .tph{background:var(--tp);border:1px solid var(--gold-line);border-radius:14px;margin-bottom:8px}
+.tp.open .tpb{padding:0 2px 6px;max-width:860px;margin:0 auto}
+.tpb .tin{font-family:var(--display);font-size:22px;font-weight:700;border:0;background:none;padding:4px 2px;min-height:0}
+.refrow{display:flex;gap:6px;align-items:center;margin:2px 0}
+.refrow .in{flex:1;min-width:0;min-height:38px;height:38px;font-size:14px;color:var(--gold)}
+.btn.sm{height:38px;min-height:0;padding:0 12px;font-size:13px;white-space:nowrap;flex:none}
+.tmenu{display:none;margin:6px 0 2px;flex-wrap:wrap}.tmenu.ver{display:flex}
+.folha{margin-top:6px}
+.folha .bk{position:relative;background:none;border:0;border-radius:0;padding:0;margin:0 0 4px;display:block}
+.folha .bk.t-texto .rt{border:0;background:none;padding:6px 30px 6px 2px;min-height:44px;font-size:17px;line-height:1.7;border-radius:0}
+.folha .bk.t-texto .rt:empty::before{content:attr(data-ph);color:var(--muted)}
+.rt ul,.rt ol,.pc .bl ul,.pc .bl ol{margin:.3em 0;padding-left:1.4em}.rt ul,.pc .bl ul{list-style:disc}.rt ol,.pc .bl ol{list-style:decimal}
+.rt li,.pc .bl li{margin:.15em 0}
+.folha .bk:not(.t-texto){background:var(--card);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;padding:8px 10px;margin:8px 0;display:grid;gap:6px}
+.folha .bk.t-obs{border-left-color:var(--muted);opacity:.95}
+.bkh{font-size:12.5px;font-weight:650;color:var(--gold);padding-right:30px}.bkh small{font-weight:400;color:var(--muted)}
+.folha .ta{border:0;background:none;padding:2px 0;min-height:40px;resize:none;overflow:hidden;font-size:16px;line-height:1.6}
+.kb{position:absolute;top:2px;right:0;width:30px;height:30px;border-radius:8px;color:var(--muted);font-size:18px;line-height:1;z-index:1;opacity:.55}
+.kb:hover,.bk.mais .kb{opacity:1;color:var(--gold)}
+.btools{display:none;gap:6px;flex-wrap:wrap;padding:2px 34px 6px 0}.bk.mais .btools{display:flex}
+.btools button{height:32px;min-width:36px;padding:0 10px;border-radius:9px;background:var(--card2);border:1px solid var(--line);font-size:13px}
+.ghost{display:block;width:100%;text-align:left;padding:12px 2px;color:var(--muted);font-size:16px;border-radius:10px;min-height:56px}
+.ghost:hover{color:var(--gold)}
+.fmtbar{display:flex!important;gap:4px!important;align-items:center;overflow-x:auto;flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px;box-shadow:0 8px 28px -10px #000a;scrollbar-width:none}
+.fmtbar::-webkit-scrollbar{display:none}
+.fmtbar button{flex:none;min-width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--ink)}
+.fmtbar button.tx{display:flex;align-items:center;gap:5px;padding:0 10px;font-size:13px;white-space:nowrap;color:var(--ink2)}
+.fmtbar button:active{background:var(--gold-soft)}
+.fmtbar .hl span{display:block;width:16px;height:16px;border-radius:5px}
+.fmtbar .hl.x span{background:none;border:1.5px solid var(--muted);position:relative}
+.fmtbar .sep{flex:none;width:1px;height:22px;background:var(--line);margin:0 3px}
+@media(min-width:700px){.folha .bk.t-texto .rt{font-size:18.5px;line-height:1.75}.tpb .tin{font-size:26px}}
 </style>
 </head>
 <body>
@@ -715,14 +755,14 @@ const amanha=()=>{const d=new Date();d.setDate(d.getDate()+1);return d.getFullYe
 const dataBR=d=>d?d.split("-").reverse().join("/"):"";
 /* Texto rico: só negrito, itálico e sublinhado passam. */
 function limpa(h){
-  const d=new DOMParser().parseFromString("<body>"+(h||"")+"</body>","text/html"),ok=new Set(["B","STRONG","I","EM","U","BR","DIV","P","MARK"]);
+  const d=new DOMParser().parseFromString("<body>"+(h||"")+"</body>","text/html"),ok=new Set(["B","STRONG","I","EM","U","BR","DIV","P","MARK","UL","OL","LI"]);
   (function w(n){[...n.childNodes].forEach(c=>{
     if(c.nodeType===1){w(c);if(!ok.has(c.tagName))c.replaceWith(...c.childNodes);else[...c.attributes].forEach(a=>{if(!(c.tagName==="MARK"&&a.name==="class"&&/^g[1-3]$/.test(a.value)))c.removeAttribute(a.name);});}
     else if(c.nodeType!==3)c.remove();
   });})(d.body);
   return d.body.innerHTML;
 }
-function plain(h){const d=document.createElement("div");d.innerHTML=limpa(h).replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p)>/gi,"\n");return d.textContent.trim();}
+function plain(h){const d=document.createElement("div");d.innerHTML=limpa(h);d.querySelectorAll("li").forEach(li=>{const p=li.parentElement,n=p&&p.tagName==="OL"?([...p.children].indexOf(li)+1)+". ":"• ";li.insertBefore(document.createTextNode(n),li.firstChild);li.appendChild(document.createElement("br"));});d.innerHTML=d.innerHTML.replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p)>/gi,"\n");return d.textContent.replace(/\n{3,}/g,"\n\n").trim();}
 const paraHtml=t=>esc(t).replace(/\n/g,"<br>").replace(/\uE000/g,"<b>").replace(/\uE001/g,"</b>").replace(/\uE002/g,"<i>").replace(/\uE003/g,"</i>").replace(/\uE004/g,"");
 const semMarca=t=>String(t).replace(/[\uE000-\uE004]/g,"");
 function blocosDeNotas(n){
@@ -1057,12 +1097,12 @@ function abrirNome(){
 const cur=()=>sermao(V.id);
 function blocoEd(b,i,n){
   const [ic,lab]=TIPOS[b.tipo];let c="";
-  if(b.tipo==="biblico")c=`<input class="in" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><textarea class="in" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea><div class="row" style="gap:8px"><button class="btn gold" style="flex:1" data-a="pick" data-k="bloco" data-v="${b.id}">📚 Escolher passagem</button><button class="btn" style="flex:1" data-a="bfill" data-v="${b.id}">📖 Buscar pela referência</button></div>`;
-  else if(b.tipo==="texto")c=`<div class="fmt"><button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button><button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button></div><div class="rt" contenteditable="true" role="textbox" aria-label="Texto" data-b="html">${limpa(b.t)}</div>`;
-  else if(b.tipo==="lista")c=`<textarea class="in" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
-  else if(b.tipo==="citacao")c=`<textarea class="in" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
-  else c=`<textarea class="in" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
-  return `<div class="bk" data-bid="${b.id}"><div class="bh"><span>${ic} ${lab}</span><span class="tools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}" aria-label="Começar um novo tópico a partir deste bloco">⤓ Novo tópico</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="iabloco" data-v="${b.id}" aria-label="Assistente de IA neste texto">${ico("spark",14)}</button><button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></span></div>${c}</div>`;
+  if(b.tipo==="biblico")c=`<div class="bkh">${ic} ${lab}</div><div class="refrow"><input class="in rf2" data-b="ref" placeholder="Ex.: Marcos 4:37-38" value="${esc(b.ref)}"><button class="btn sm gold" data-a="pick" data-k="bloco" data-v="${b.id}">📚 Passagem</button><button class="btn sm" data-a="bfill" data-v="${b.id}">Buscar</button></div><textarea class="in ta" data-b="t" placeholder="Texto do versículo (preenchido pela Bíblia)">${esc(b.t)}</textarea>`;
+  else if(b.tipo==="texto")c=`<div class="rt" contenteditable="true" role="textbox" aria-label="Texto" data-ph="Escreva aqui…" data-b="html">${limpa(b.t)}</div>`;
+  else if(b.tipo==="lista")c=`<div class="bkh">${ic} ${lab}</div><textarea class="in ta" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
+  else if(b.tipo==="citacao")c=`<div class="bkh">${ic} ${lab}</div><textarea class="in ta" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
+  else c=`<div class="bkh">${ic} ${lab} <small>só para você</small></div><textarea class="in ta" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
+  return `<div class="bk t-${b.tipo}" data-bid="${b.id}"><button class="kb" data-a="bmais" aria-label="Opções deste bloco">⋯</button><div class="btools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}">⤓ Novo tópico daqui</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="iabloco" data-v="${b.id}" aria-label="Assistente de IA neste texto">${ico("spark",14)} IA</button><button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></div>${c}</div>`;
 }
 const WPM=130;
 function palT(t){let n=0;t.blocos.forEach(b=>{if(b.tipo==="obs")return;const x=b.tipo==="texto"?plain(b.t):(b.t||"");const w=x.split(/\s+/).filter(Boolean).length;n+=b.tipo==="biblico"?Math.round(w*.8):w;});return n;}
@@ -1075,11 +1115,9 @@ function renderEdit(y){
   let h=`<div class="top"><button class="ib" data-a="voltar" aria-label="Voltar">←</button><span style="flex:1"></span><span class="salvo" id="salvo">Salvo ✓</span>
     <button class="ib fv ${s.fav?"on":""}" data-a="fav" data-v="${s.id}" aria-label="Favoritar">${ico("star",20)}</button><button class="ib" data-a="pdf" aria-label="Exportar PDF">${ico("pdf",20)}</button><button class="btn gold pg" data-a="pregar">${ico("play",15)} Pregar</button></div>
   <input class="in title" id="f-titulo" placeholder="Título da mensagem" value="${esc(s.titulo)}">
-  <div class="chips" style="margin:8px 0 14px"><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.base?`<span class="chip">📖 ${esc(s.base)}</span>`:""}${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}${s.pasta?`<span class="chip">📁 ${esc(s.pasta)}</span>`:""}</div>
-  <div class="est ${estado}"><div class="estl"><span><b>${est}</b> min estimados <small>de ${s.min}</small></span><span class="meta">${w.toLocaleString("pt-BR")} palavras</span></div>
-  <div class="estb"><i style="width:${pct}%"></i></div>
-  <small class="meta">${estado==="vazio"?"Escreva nos tópicos para ver o tempo estimado de pregação.":estado==="alto"?"Passa do tempo previsto. Vale enxugar algum tópico.":estado==="baixo"?"Ainda sobra tempo. Há espaço para desenvolver mais.":"Bom encaixe com o tempo da mensagem."}</small></div>
-  <button class="add" style="height:46px;margin-bottom:6px" data-a="det">${V.det?"▴ Ocultar detalhes":"⚙ Detalhes da mensagem"}</button>`;
+  <div class="chips" style="margin:8px 0 10px"><button class="chip detb" data-a="det">${V.det?"▴ Fechar detalhes":"⚙ Detalhes"}</button><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.base?`<span class="chip">📖 ${esc(s.base)}</span>`:""}${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}${s.pasta?`<span class="chip">📁 ${esc(s.pasta)}</span>`:""}</div>
+  <div class="estc ${estado}"><span><b>${est}</b> / ${s.min} min</span><div class="estb"><i style="width:${pct}%"></i></div><span class="meta">${w.toLocaleString("pt-BR")} palavras</span></div>
+  `;
   if(V.det)h+=`<div class="card" style="margin-top:8px">
   <label class="f" for="f-base" style="margin-top:0">Texto base</label>
   <input class="in" id="f-base" placeholder="Ex.: Marcos 4:35-41" value="${esc(s.base)}"><div class="hint" id="hint-base">${esc(livroDe(s.base)||"")}</div><button class="btn" style="margin-top:6px" data-a="pick" data-k="base" data-v="${s.id}">📚 Escolher texto base na Bíblia</button>
@@ -1104,17 +1142,17 @@ function renderEdit(y){
   <label class="f">Eventos vinculados</label>
   ${evs.map(e=>`<div class="hist"><span>${metaEv(e)} · ${esc(e.titulo)}</span><button data-a="desv" data-v="${e.id}" aria-label="Desvincular">✕</button></div>`).join("")}
   <button class="add" style="height:44px" data-a="vinc">⛓ Vincular evento da agenda</button></div>`;
-  h+=`<div class="gh" style="margin-top:22px">Tópicos · ${s.topicos.length}</div>`;
+  if(!V.ab.size&&V.nop!==s.id&&s.topicos.length)V.ab=new Set([s.topicos[0].id]);
+  h+=`<div class="gh" style="margin-top:14px">Tópicos · ${s.topicos.length}</div>`;
   s.topicos.forEach((t,i)=>{
     const ab=V.ab.has(t.id),pw=palT(t);
     h+=`<div class="tp ${ab?"open":""}" data-t="${t.id}"><div class="tph" data-a="tog" data-v="${t.id}"><span class="num">${i+1}</span><span class="tt ${t.titulo?"":"vazio"}">${esc(t.titulo||"Tópico sem título")}${pw?`<small class="tmin">~${minEst(pw)} min</small>`:""}</span>${t.ref?`<span class="rf">${esc(t.ref)}</span>`:""}<span class="cv">⌄</span></div>
-    <div class="tpb"><input class="in" data-f="titulo" placeholder="Título do tópico" value="${esc(t.titulo)}" aria-label="Título do tópico ${i+1}">
-      <input class="in" data-f="ref" style="margin-top:8px" placeholder="Versículo (ex.: Marcos 4:37)" value="${esc(t.ref)}" aria-label="Versículo do tópico ${i+1}"><div class="hint" data-hint>${esc(livroDe(t.ref)||"")}</div><button class="btn" style="margin-top:6px" data-a="pick" data-k="topico" data-v="${t.id}">📚 Escolher versículo na Bíblia</button>
-      ${t.blocos.map((b,j)=>blocoEd(b,j,t.blocos.length)).join("")}
-      <label class="f" style="margin-top:8px">Adicionar ao tópico</label>
-      <div class="ferr">${Object.entries(TIPOS).map(([k,[ic,lb]])=>`<button data-a="addb" data-v="${k}"><i>${ic}</i>${lb}</button>`).join("")}<button data-a="ilusins"><i>💡</i>Ilustração</button></div>
-      <div class="tools"><button data-a="sobe" data-v="${t.id}" aria-label="Mover tópico para cima">▲</button><button data-a="desce" data-v="${t.id}" aria-label="Mover tópico para baixo">▼</button>${i>0?`<button class="tx" data-a="tjunta" data-v="${t.id}" aria-label="Juntar ao tópico anterior">⤒ Juntar ao anterior</button>`:""}<button data-a="delt" data-v="${t.id}" aria-label="Excluir tópico">✕ Excluir tópico</button></div></div></div>`;
+    <div class="tpb"><input class="in tin" data-f="titulo" placeholder="Título do tópico" value="${esc(t.titulo)}" aria-label="Título do tópico ${i+1}">
+      <div class="refrow"><input class="in rf2" data-f="ref" placeholder="Versículo (ex.: Marcos 4:37)" value="${esc(t.ref)}" aria-label="Versículo do tópico ${i+1}"><button class="btn sm" data-a="pick" data-k="topico" data-v="${t.id}">📚 Bíblia</button><button class="btn sm" data-a="tmais" aria-label="Opções do tópico">⋯</button></div><div class="hint" data-hint>${esc(livroDe(t.ref)||"")}</div>
+      <div class="tools tmenu"><button data-a="sobe" data-v="${t.id}" aria-label="Mover tópico para cima">▲</button><button data-a="desce" data-v="${t.id}" aria-label="Mover tópico para baixo">▼</button>${i>0?`<button class="tx" data-a="tjunta" data-v="${t.id}">⤒ Juntar ao anterior</button>`:""}<button data-a="delt" data-v="${t.id}">✕ Excluir tópico</button></div>
+      <div class="folha">${t.blocos.map((b,j)=>blocoEd(b,j,t.blocos.length)).join("")}${!t.blocos.length?`<button class="ghost" data-a="addb" data-v="texto">Toque aqui e comece a escrever…</button>`:(t.blocos[t.blocos.length-1].tipo!=="texto"?`<button class="ghost" data-a="addb" data-v="texto">＋ Continuar escrevendo</button>`:"")}</div></div></div>`;
   });
+  h+=`<button class="add" style="height:46px;margin-top:4px" data-a="addt">+ Adicionar tópico</button>`;
   h+=`<div class="gh" style="margin-top:26px">Quando preguei · ${s.hist.length}</div>`;
   s.hist.slice().sort((a,b)=>b.data.localeCompare(a.data)).forEach(x=>{
     h+=`<div class="hist"><span>${dataBR(x.data)}${x.local?" · "+esc(x.local):""}${x.min?" · "+x.min+" min":""}</span><button data-a="delh" data-v="${x.id}" aria-label="Excluir registro">✕</button></div>`;
@@ -1122,8 +1160,14 @@ function renderEdit(y){
   h+=`<button class="add" style="height:44px" data-a="regis">+ Registrar pregação</button>
   <div class="bar" style="margin-top:22px"><button class="btn" data-a="pdf">Exportar PDF</button><button class="btn" data-a="dup">Duplicar</button><button class="btn" data-a="txt">Copiar como texto</button>
   <button class="btn danger" data-a="del">${V.apagar===s.id?"Toque de novo para excluir":"Excluir mensagem"}</button></div>
-  <div class="dock"><div><button class="btn gold" data-a="addt">+ Adicionar tópico</button></div></div>`;
+  <div class="dock"><div class="fmtbar" role="toolbar" aria-label="Formatação">
+  <button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button>
+  <button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button>
+  <i class="sep"></i><button data-a="flist" data-v="ul" aria-label="Lista com marcadores"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg></button><button data-a="flist" data-v="ol" aria-label="Lista numerada"><b style="font-size:13px">1.</b></button>
+  <i class="sep"></i><button class="tx" data-a="ins" data-v="biblico" aria-label="Inserir versículo">📖 Versículo</button><button class="tx" data-a="ins" data-v="citacao" aria-label="Inserir citação">❝ Citação</button><button class="tx" data-a="ins" data-v="obs" aria-label="Inserir observação">✎ Nota</button><button class="tx" data-a="ilusinsb" aria-label="Inserir ilustração">${ico("bulb",15)} Ilustração</button><button class="tx" data-a="iafoco" aria-label="Assistente de IA">${ico("spark",15)} IA</button>
+  </div></div>`;
   $("app").innerHTML=h;
+  document.querySelectorAll(".tpb textarea.ta").forEach(autoH);
   if(y!==undefined)scrollTo(0,y);
 }
 /* ---------- Seletor de passagem: versão, livro, capítulo e versículos ---------- */
@@ -1177,6 +1221,20 @@ document.addEventListener("change",e=>{
   else if(t.id==="pk-l"&&PK){PK.l=+t.value;PK.c=1;PK.sel=new Set();desenhaPick();}
 });
 const rerender=()=>renderEdit(scrollY);
+function focoT(){const s=cur();let r={t:null,bl:null};if(V.fb&&s)for(const t of s.topicos){const bl=t.blocos.find(x=>x.id===V.fb);if(bl)r={t,bl};}if(r.t&&!V.ab.has(r.t.id))r={t:null,bl:null};return r;}
+function inserirBloco(tipo){
+  const s=cur(),f=focoT(),t=f.t||s.topicos.find(x=>V.ab.has(x.id));
+  if(!t){toast("Abra um tópico primeiro",1800);return;}
+  const bl={id:uid(),tipo,t:"",ref:"",aut:""},j=f.bl?t.blocos.findIndex(x=>x.id===f.bl.id):-1;
+  if(j>=0)t.blocos.splice(j+1,0,bl);else t.blocos.push(bl);
+  s.at=Date.now();salvar();rerender();
+  if(tipo==="biblico")abrirPick("bloco",bl.id);else focaBloco(bl.id);
+}
+function focaBloco(id){setTimeout(()=>{const e=document.querySelector('[data-bid="'+id+'"] .rt, [data-bid="'+id+'"] textarea');if(!e)return;e.focus();if(e.isContentEditable){const r=document.createRange();r.selectNodeContents(e);r.collapse(false);const x=getSelection();x.removeAllRanges();x.addRange(r);}e.scrollIntoView({block:"center",behavior:"smooth"});},40);}
+const autoH=e=>{e.style.height="auto";if(e.scrollHeight)e.style.height=e.scrollHeight+2+"px";};
+document.addEventListener("focusin",e=>{const k=e.target.closest&&e.target.closest("[data-bid]");if(k&&V.tela==="edit")V.fb=k.dataset.bid;});
+document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(".fmtbar"))e.preventDefault();});
+document.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".tpb textarea.ta"))autoH(e.target);});
 function achaT(el){const b=el.closest("[data-t]");return b&&cur().topicos.find(t=>t.id===b.dataset.t);}
 function mover(arr,id,d){const i=arr.findIndex(t=>t.id===id),j=i+d;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];cur().at=Date.now();salvar();rerender();}
 function textoDe(s){
@@ -2251,9 +2309,15 @@ document.addEventListener("click",e=>{
   else if(a==="voltar"||a==="ok"){if(a==="ok")toast("Salvo");salvar();V.tela="lista";V.apagar=null;render();}
   else if(a==="tempo"){const s=cur();s.min=+v;s.at=Date.now();salvar();rerender();}
   else if(a==="status"){const s=cur();s.status=v;s.at=Date.now();salvar();rerender();}
-  else if(a==="tog"){V.ab.has(v)?V.ab.delete(v):V.ab.add(v);rerender();}
-  else if(a==="addt"){const s=cur(),t={id:uid(),titulo:"",ref:"",blocos:[]};s.topicos.push(t);V.ab.add(t.id);salvar();rerender();}
-  else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();if(v==="biblico")abrirPick("bloco",bl.id);}
+  else if(a==="tog"){const ja=V.ab.has(v);V.ab=ja?new Set():new Set([v]);V.nop=ja?cur().id:null;rerender();if(!ja)setTimeout(()=>{const e=document.querySelector('.tp[data-t="'+v+'"]');if(e)scrollTo({top:e.getBoundingClientRect().top+scrollY-70,behavior:"smooth"});},30);}
+  else if(a==="addt"){const s=cur(),t={id:uid(),titulo:"",ref:"",blocos:[]};s.topicos.push(t);V.ab=new Set([t.id]);salvar();rerender();setTimeout(()=>{const e=document.querySelector('.tp[data-t="'+t.id+'"] .tin');if(e){e.focus();e.scrollIntoView({block:"center",behavior:"smooth"});}},40);}
+  else if(a==="addb"){const t=achaT(b);const bl={id:uid(),tipo:v,t:"",ref:"",aut:""};t.blocos.push(bl);cur().at=Date.now();salvar();rerender();if(v==="biblico")abrirPick("bloco",bl.id);else focaBloco(bl.id);}
+  else if(a==="bmais"){const k=b.closest(".bk");if(k)k.classList.toggle("mais");}
+  else if(a==="tmais"){const m=b.closest(".tpb").querySelector(".tmenu");if(m)m.classList.toggle("ver");}
+  else if(a==="ins")inserirBloco(v);
+  else if(a==="flist"){const r=document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".rt");if(!r)toast("Toque dentro do texto primeiro",1800);else document.execCommand(v==="ol"?"insertOrderedList":"insertUnorderedList");}
+  else if(a==="iafoco"){const f=focoT();if(f.bl&&(f.bl.tipo==="texto"||f.bl.tipo==="citacao"))abrirIABloco(f.t.id,f.bl.id);else toast("Toque dentro de um texto primeiro",1800);}
+  else if(a==="ilusinsb"){const f=focoT(),t=f.t||cur().topicos.find(x=>V.ab.has(x.id));if(t){ILUSP={tid:t.id};abrirIlusPick();}else toast("Abra um tópico primeiro",1800);}
   else if(a==="pick")abrirPick(b.dataset.k,v);
   else if(a==="pkcap"){PK.c=+v;PK.sel=new Set();desenhaPick();}
   else if(a==="pkv"){const n=+v;if(PK.sel.has(n))PK.sel.delete(n);else PK.sel.add(n);desenhaPick(true);}
@@ -2268,14 +2332,14 @@ document.addEventListener("click",e=>{
     if(f.tipo==="texto"&&pt&&pt.length<=90&&!pt.includes("\n")){titulo=pt;rest.shift();}
     const nt={id:uid(),titulo,ref:"",blocos:rest};
     s0.topicos.splice(s0.topicos.indexOf(t)+1,0,nt);
-    s0.at=Date.now();V.ab.add(nt.id);salvar();rerender();toast("Novo tópico criado. Dê um título se precisar.",2400);
+    s0.at=Date.now();V.ab=new Set([nt.id]);salvar();rerender();toast("Novo tópico criado. Dê um título se precisar.",2400);
   }
   else if(a==="tjunta"){
     const s0=cur(),i=s0.topicos.findIndex(x=>x.id===v);if(i<1)return;
     const t=s0.topicos[i],ant=s0.topicos[i-1];
     if(t.titulo)ant.blocos.push({id:uid(),tipo:"texto",t:"<b>"+esc(t.titulo)+"</b>"});
     ant.blocos.push(...t.blocos);s0.topicos.splice(i,1);
-    s0.at=Date.now();V.ab.add(ant.id);salvar();rerender();toast("Tópicos juntados.",2000);
+    s0.at=Date.now();V.ab=new Set([ant.id]);salvar();rerender();toast("Tópicos juntados.",2000);
   }
   else if(a==="bdel"){const t=achaT(b);t.blocos=t.blocos.filter(x=>x.id!==v);salvar();rerender();}
   else if(a==="gp"){grifarPreg(+v);}
@@ -2424,7 +2488,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="41";
+const VER="42";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
