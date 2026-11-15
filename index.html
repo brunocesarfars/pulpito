@@ -599,6 +599,11 @@ button.iactx{width:100%;text-align:left}
 .gbar .c1{background:#f5d34a}.gbar .c2{background:#5ec882}.gbar .c3{background:#f078a0}.gbar .c0{background:var(--card2)}
 .dot{display:block;width:14px;height:14px;border-radius:50%}
 .dot.y{background:#e6b800}.dot.o{background:#f07a1a}.dot.r{background:#e5484d}
+.guia{margin:12px 0 4px;padding:12px 14px;border-radius:14px;background:var(--card2);border:1px solid var(--line)}
+.guia summary{font-weight:600;font-size:14px;cursor:pointer}
+.guia ol{margin:10px 0 6px;padding-left:20px;font-size:14px;line-height:1.55}
+.guia li{margin-bottom:4px}
+a.btn{text-decoration:none;color:var(--text);align-items:center}
 </style>
 </head>
 <body>
@@ -1471,7 +1476,11 @@ function abrirImportar(){
 
 /* ---------- Assistente de IA (chave de cada aparelho) ---------- */
 let IA={msgs:[],ctx:false,busy:false,cfg:null,sid:"",res:"",blk:null,setup:false};
-const IAP={claude:{n:"Claude",m:"claude-sonnet-5-5",l:"console.anthropic.com → API keys"},gemini:{n:"Gemini",m:"gemini-3.5-flash-lite",l:"aistudio.google.com/apikey"},openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys"}};
+const IAP={
+  claude:{n:"Claude",m:"claude-sonnet-5-5",l:"console.anthropic.com → API keys",u:"https://console.anthropic.com/settings/keys",g:"Pago por uso (a assinatura do claude.ai não vale aqui).",s:["Abra console.anthropic.com e entre com a sua conta.","Adicione crédito em Billing.","Vá em API keys e toque em Create Key.","Copie a chave (começa com sk-ant-)."]},
+  gemini:{n:"Gemini",m:"gemini-3.5-flash-lite",l:"aistudio.google.com/apikey",u:"https://aistudio.google.com/apikey",g:"Tem uso gratuito com limite diário. É a opção mais simples.",s:["Abra aistudio.google.com/apikey e entre com a sua conta Google.","Toque em Criar chave de API (Create API key). Se pedir um projeto, aceite o padrão.","Toque no ícone de copiar ao lado da chave (começa com AIza ou AQ.).","Volte aqui, cole no campo da chave e toque em Salvar e começar."]},
+  openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys",u:"https://platform.openai.com/api-keys",g:"Pago por uso (a assinatura do ChatGPT Plus não vale aqui).",s:["Abra platform.openai.com e entre com a sua conta.","Adicione crédito em Billing.","Vá em API keys e toque em Create new secret key.","Copie a chave (começa com sk-)."]}
+};
 function iaCfg(){if(!IA.cfg){try{IA.cfg=JSON.parse(localStorage.getItem("pulpito.ia")||"{}");}catch(e){IA.cfg={};}}return IA.cfg;}
 function iaSave(modo){
   if(modo!=="nuvem")iaCfg().u=Date.now();
@@ -1501,10 +1510,43 @@ async function iaChamar(msgs,sys){
     else r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+k},body:JSON.stringify({model:m,messages:[{role:"system",content:sys},...mm]})});
   }catch(e){throw new Error("Não consegui falar com a IA ("+((e&&e.message)||"sem rede")+"). Confira a internet e tente de novo.");}
   try{j=await r.json();}catch(e){}
-  if(!r.ok){const c0=r.status,em=j&&j.error&&(j.error.message||j.error);throw new Error(c0===401||c0===403?"Chave recusada. Confira se foi copiada inteira.":c0===429?"Limite de uso atingido. Tente de novo em instantes.":em?String(em).slice(0,160):"Erro "+c0);}
+  if(!r.ok){const c0=r.status,em=j&&j.error&&(j.error.message||j.error);throw new Error(c0===401||c0===403?"Chave recusada. Confira se foi copiada inteira.":c0===404?"Esse modelo não está disponível para a sua conta. Toque nas três bolinhas e use Ver modelos disponíveis.":c0===429?"Limite de uso atingido. Tente de novo em instantes.":em?String(em).slice(0,160):"Erro "+c0);}
   const t=p==="claude"?(j.content||[]).map(x=>x.text||"").join(""):p==="gemini"?((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(x=>x.text||"").join(""):((((j.choices||[])[0]||{}).message||{}).content||"");
   if(!t)throw new Error("A IA não devolveu resposta.");
   return t.trim();
+}
+async function iaListaModelos(p,k){
+  let r,j;
+  if(p==="gemini"){
+    r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key="+encodeURIComponent(k));j=await r.json();
+    if(!r.ok)throw new Error((j.error&&j.error.message)||"erro");
+    return(j.models||[]).filter(m=>/generateContent/.test((m.supportedGenerationMethods||[]).join())&&/^models\/gemini/.test(m.name)&&!/embedding|tts|image|live|audio|robotics|computer|aqa|imagen|veo/i.test(m.name)).map(m=>({id:m.name.replace("models/",""),d:m.displayName||""}));
+  }
+  if(p==="openai"){
+    r=await fetch("https://api.openai.com/v1/models",{headers:{authorization:"Bearer "+k}});j=await r.json();
+    if(!r.ok)throw new Error((j.error&&j.error.message)||"erro");
+    return(j.data||[]).filter(m=>/^(gpt|o\d)/.test(m.id)&&!/audio|realtime|image|tts|transcribe|search|embedding|moderation|instruct|vision|preview/.test(m.id)).map(m=>({id:m.id,d:""}));
+  }
+  r=await fetch("https://api.anthropic.com/v1/models?limit=100",{headers:{"x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"}});j=await r.json();
+  if(!r.ok)throw new Error((j.error&&j.error.message)||"erro");
+  return(j.data||[]).map(m=>({id:m.id,d:m.display_name||""}));
+}
+function iaModelosLista(q){
+  const box=$("ia-ml");if(!box)return;
+  const n=(q||"").trim().toLowerCase(),l=(IA.mods||[]).filter(m=>!n||(m.id+" "+m.d).toLowerCase().includes(n));
+  box.innerHTML=l.length?l.map(m=>`<button class="iap" data-a="iamsel" data-v="${esc(m.id)}"><b>${esc(m.id)}</b>${m.d?`<small>${esc(m.d)}</small>`:""}</button>`).join(""):`<p class="meta" style="padding:14px 4px">Nenhum modelo encontrado.</p>`;
+}
+async function iaAbrirModelos(){
+  const c=iaCfg(),pv=IAP[c.p]?c.p:"claude",k=(($("ia-k")||{}).value||c.k||"").trim();
+  if(!k){toast("Cole a chave primeiro");return;}
+  $("mb").innerHTML=`<h3>Modelos do ${IAP[pv].n}</h3><p class="meta">Buscando os modelos liberados para a sua chave…</p>`;$("modal").classList.add("show");
+  try{
+    IA.mods=(await iaListaModelos(pv,k)).sort((a,b)=>a.id<b.id?1:-1);
+    $("mb").innerHTML=`<h3>Modelos do ${IAP[pv].n}</h3><label class="sbox">${ico("search",20)}<input id="ia-mq" type="search" autocomplete="off" placeholder="Buscar modelo"></label><div id="ia-ml" class="iapl"></div><div class="bar" style="margin-top:12px"><button class="btn" data-a="fechar">Fechar</button></div>`;
+    iaModelosLista("");
+  }catch(e){
+    $("mb").innerHTML=`<h3>Modelos do ${IAP[pv].n}</h3><p class="meta">Não consegui buscar a lista: ${esc(String(e.message||e).slice(0,160))}</p><div class="bar" style="margin-top:12px"><button class="btn gold" data-a="fechar">Fechar</button></div>`;
+  }
 }
 function iaSystem(){
   let t="Você é um assistente para pregadores e professores cristãos evangélicos, em português do Brasil. Seja claro, direto e fiel à Bíblia. Nunca invente versículos, citações ou fatos; se não tiver certeza, diga. Ao reescrever textos, preserve o estilo e a voz de quem escreveu.";
@@ -1562,11 +1604,12 @@ function renderIA(){
     $("app").innerHTML=h+nav();return;
   }
   if(!c.k||IA.setup){
-    h+=`<p class="sd2">Use a sua própria IA. A chave fica só neste aparelho e não é sincronizada nem entra na cópia de segurança.</p>
+    h+=`<p class="sd2">Use a sua própria IA. A chave fica na sua conta e aparece sozinha nos seus outros aparelhos, mas não entra na cópia de segurança.</p>
     <div class="card"><h3>Qual IA você usa?</h3><div class="seg eq">${Object.keys(IAP).map(k=>`<button class="${pv===k?"on":""}" data-a="iaprov" data-v="${k}">${IAP[k].n}</button>`).join("")}</div>
     <label class="f">Chave de acesso (API key)</label><input class="in" id="ia-k" type="password" autocomplete="off" placeholder="Cole a chave aqui" value="${esc(c.k||"")}">
-    <p class="meta" style="margin-top:6px">Como obter: ${IAP[pv].l}. O uso é cobrado na conta de quem criou a chave.</p>
+    <details class="guia"><summary>Como conseguir a chave do ${IAP[pv].n}</summary><ol>${IAP[pv].s.map(x=>`<li>${x}</li>`).join("")}</ol><p class="meta">${IAP[pv].g} A chave é sua: não envie para ninguém.</p><a class="btn" href="${IAP[pv].u}" target="_blank" rel="noopener" style="display:flex;justify-content:center;margin-top:8px">Abrir ${IAP[pv].l.split(" ")[0]}</a></details>
     <label class="f">Modelo (opcional)</label><input class="in" id="ia-m" placeholder="${IAP[pv].m}" value="${esc(c.m||"")}">
+    <button class="btn" style="width:100%;margin-top:8px" data-a="iamodelos">Ver modelos disponíveis</button>
     <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="iasalva">Salvar e começar</button>${c.k?"":`<button class="btn" data-a="iaconf">Voltar</button>`}${c.k?`<button class="btn danger" data-a="iatira">Remover chave</button>`:""}</div></div>`;
     $("app").innerHTML=h+nav();return;
   }
@@ -2074,6 +2117,8 @@ document.addEventListener("click",e=>{
   else if(a==="iaesc"){IA.sid=v||"";IA.ctx=!!v;fechar();renderIA();}
   else if(a==="iaabrir2"){fechar();V.tela="lista";V.tab="mais";IA.setup=true;V.tela="ia";render();}
   else if(a==="iafecha"){V.tela=V.id&&V.voltaEdit?"edit":"lista";V.tab="mais";IA.setup=false;render();scrollTo(0,0);}
+  else if(a==="iamodelos"){iaAbrirModelos();}
+  else if(a==="iamsel"){const e=$("ia-m");if(e)e.value=v;fechar();toast("Modelo escolhido. Toque em Salvar.",2200);}
   else if(a==="iaconf"){IA.setup=!IA.setup;renderIA();}
   else if(a==="iaprov"){iaCfg().p=v;iaCfg().k=($("ia-k")||{}).value||iaCfg().k||"";IA.cfg.m="";renderIA();}
   else if(a==="iasalva"){const k=($("ia-k").value||"").trim();if(!k){toast("Cole a chave de acesso");return;}iaCfg().k=k;IA.cfg.m=($("ia-m").value||"").trim();if(!IAP[IA.cfg.p])IA.cfg.p="claude";iaSave();IA.setup=false;toast("Assistente pronto");renderIA();}
@@ -2305,6 +2350,7 @@ document.addEventListener("input",e=>{
   if(t.id==="q"){V.q=t.value;renderMsgs();return;}
   if(t.id==="iq"){V.iq=t.value;renderIlus();return;}
   if(t.id==="ia-bq"){iaPickLista(t.value);return;}
+  if(t.id==="ia-mq"){iaModelosLista(t.value);return;}
   if(t.id==="ia-t"){t.style.height="auto";t.style.height=Math.min(140,t.scrollHeight)+"px";return;}
   if(t.id==="bq"){V.bq=t.value;clearTimeout(input.t);input.t=setTimeout(()=>{if(V.tab!=="biblia"||V.bk!==null)return;const f=document.activeElement&&document.activeElement.id==="bq";renderBiblia();if(f){const e=$("bq");e.focus();e.setSelectionRange(e.value.length,e.value.length);}},350);return;}
   if(V.tela!=="edit"||!cur()||t.closest("#modal"))return;
@@ -2340,7 +2386,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="39";
+const VER="40";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
