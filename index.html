@@ -685,6 +685,12 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 #preach,#preach *{touch-action:pan-y}
 #preach.roll.show{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"bar" "prog" "cont" "sheet"!important}
 #preach.roll .pcont{grid-area:cont}
+
+/* ---- v52: grifos coloridos na Bíblia ---- */
+.rd p.hl1{background:var(--gold-line)}.rd p.hl2{background:#2f6b45aa}.rd p.hl3{background:#8a3a5caa}
+:root[data-tema="claro"] .rd p.hl1{background:#f6e3a8}:root[data-tema="claro"] .rd p.hl2{background:#bfe8cc}:root[data-tema="claro"] .rd p.hl3{background:#f6cadb}
+#selbar .cor{min-width:34px!important;width:34px;height:34px;padding:0!important;border-radius:50%!important;justify-content:center;border:2px solid var(--line)}
+#selbar .c1{background:#f5d34a}#selbar .c2{background:#5ec882}#selbar .c3{background:#f078a0}#selbar .c0{background:none}
 </style>
 </head>
 <body>
@@ -1013,7 +1019,7 @@ function renderBiblia(){
     h=`<div class="top"><button class="ib" data-a="bvolta" aria-label="Voltar">←</button><h1 style="font-size:20px">${LIVROS[V.bk]} ${V.ch}</h1>
     <button class="ib" data-a="bmenos" aria-label="Diminuir letra">A−</button><button class="ib" data-a="bmais" aria-label="Aumentar letra">A+</button>
     <button class="ib ${mk?"star on":""}" style="position:static" data-a="bmarca" aria-label="Marcar capítulo">${mk?"★":"☆"}</button></div>
-    <div class="rd" style="--bf:${c.bf}px">${vs.map((t,i)=>`<p class="${c.dest[k+(i+1)]?"hl":""} ${V.alvo===i+1?"alvo":""} ${V.sel.has(i+1)?"sel":""}" data-a="vs" data-v="${i+1}"><sup>${i+1}</sup>${esc(t)}</p>`).join("")}</div>
+    <div class="rd" style="--bf:${c.bf}px">${vs.map((t,i)=>`<p class="${c.dest[k+(i+1)]?"hl hl"+(+c.dest[k+(i+1)]||1):""} ${V.alvo===i+1?"alvo":""} ${V.sel.has(i+1)?"sel":""}" data-a="vs" data-v="${i+1}"><sup>${i+1}</sup>${esc(t)}</p>`).join("")}</div>
     <div class="pnav" style="padding:0"><button class="btn" data-a="bant">‹ Anterior</button><button class="btn gold" data-a="bprox">Próximo ›</button></div>
     <div class="seg" style="margin-top:14px">${Object.keys(versList()).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}">${versList()[k].n}</button>`).join("")}</div><p class="meta">Toque nos versículos para selecionar. ${(versList()[db.cfg.versao||"acf"]||VERS.acf).d}.</p>`;
   }
@@ -2125,11 +2131,23 @@ async function exportarPDF(s){
   doc.save(nome);toast("PDF gerado: "+nome,3200);
 }
 /* ---------- Seleção de versículos ---------- */
-function refSel(){
-  const n=[...V.sel].sort((a,b)=>a-b),r=[];let i=0;
+const verNome=()=>(versList()[db.cfg.versao||"acf"]||VERS.acf).n;
+function refSel(){return refNums([...V.sel]);}
+function refNums(n0){
+  const n=n0.slice().sort((a,b)=>a-b),r=[];let i=0;
   while(i<n.length){let j=i;while(j+1<n.length&&n[j+1]===n[j]+1)j++;r.push(j>i?n[i]+"-"+n[j]:""+n[i]);i=j+1;}
   return LIVROS[V.bk]+" "+V.ch+":"+r.join(",");
 }
+/* Copiar: "Salmos 25:14-15 ACF" + versículos numerados (também no copiar nativo do tablet) */
+function textoCopia(nums,txt){return refNums(nums)+" "+verNome()+"\n"+nums.map((n,i)=>n+" "+txt[i]).join("\n");}
+document.addEventListener("copy",e=>{
+  if(!(V.tela==="lista"&&V.tab==="biblia"&&V.ch!==null))return;
+  const sel=getSelection();if(!sel||!sel.rangeCount||sel.isCollapsed)return;
+  const r=sel.getRangeAt(0),ps=[...document.querySelectorAll(".rd p")].filter(p=>r.intersectsNode(p)),nums=[],txt=[];
+  ps.forEach(p=>{const tn=p.lastChild;if(!tn)return;let t=tn.textContent,a=0,b=t.length;if(r.startContainer===tn)a=r.startOffset;if(r.endContainer===tn)b=r.endOffset;t=t.slice(a,b).trim();if(t){nums.push(+p.dataset.v);txt.push(t);}});
+  if(!nums.length)return;
+  e.preventDefault();e.clipboardData.setData("text/plain",textoCopia(nums,txt));
+});
 function textoSel(){const vs=bib()[V.bk][V.ch-1]||[];return[...V.sel].sort((a,b)=>a-b).map(n=>n+" "+vs[n-1]).join("\n");}
 function selbar(){
   let e=$("selbar");
@@ -2137,7 +2155,7 @@ function selbar(){
   if(!on){if(e)e.remove();return;}
   if(!e){e=document.createElement("div");e.id="selbar";document.body.appendChild(e);}
   e.innerHTML=`<div><span class="sn"><b>${V.sel.size}</b> ${V.sel.size===1?"versículo":"versículos"}</span>
-  <button data-a="seldest" aria-label="Destacar">${ico("hl",19)}<small>Destacar</small></button>
+  <button class="cor c1" data-a="selhl" data-v="1" aria-label="Grifar amarelo"></button><button class="cor c2" data-a="selhl" data-v="2" aria-label="Grifar verde"></button><button class="cor c3" data-a="selhl" data-v="3" aria-label="Grifar rosa"></button><button class="cor c0" data-a="selhl" data-v="0" aria-label="Tirar grifo">${ico("x",14)}</button>
   <button data-a="selcop" aria-label="Copiar">${ico("copy",19)}<small>Copiar</small></button>
   <button class="pri" data-a="selserm" aria-label="Usar em sermão">${ico("plus",19)}<small>Sermão</small></button>
   <button data-a="selx" aria-label="Limpar seleção">${ico("x",19)}</button></div>`;
@@ -2378,8 +2396,8 @@ document.addEventListener("click",e=>{
   else if(a==="nada"){}
   else if(a==="pdf"){exportarPDF(cur());}
   else if(a==="selx"){V.sel=new Set();renderBiblia();}
-  else if(a==="seldest"){const ks=[...V.sel].map(n=>V.bk+"."+V.ch+"."+n),todos=ks.every(k=>db.cfg.dest[k]);ks.forEach(k=>{if(todos)delete db.cfg.dest[k];else db.cfg.dest[k]=1;});salvar();V.sel=new Set();const y=scrollY;renderBiblia();scrollTo(0,y);toast(todos?"Destaque removido":"Destacado");}
-  else if(a==="selcop"){const t=refSel()+"\n"+textoSel();const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy");}catch(x){}ta.remove();try{navigator.clipboard.writeText(t);ok=true;}catch(x){}toast(ok?"Versículos copiados":"Não consegui copiar");}
+  else if(a==="selhl"){const ks=[...V.sel].map(n=>V.bk+"."+V.ch+"."+n);ks.forEach(k=>{if(+v)db.cfg.dest[k]=+v;else delete db.cfg.dest[k];});salvar();V.sel=new Set();const y=scrollY;renderBiblia();scrollTo(0,y);toast(+v?"Grifado":"Grifo removido");}
+  else if(a==="selcop"){const ns=[...V.sel].sort((a,b)=>a-b),vs0=bib()[V.bk][V.ch-1]||[],t=textoCopia(ns,ns.map(n=>vs0[n-1]));const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy");}catch(x){}ta.remove();try{navigator.clipboard.writeText(t);ok=true;}catch(x){}toast(ok?"Versículos copiados":"Não consegui copiar");}
   else if(a==="selserm")abrirSelSermao();
   else if(a==="selnovo"){const pre={ref:refSel(),t:textoSel()};fechar();V.sel=new Set();renderBiblia();abrirNovo(pre);}
   else if(a==="seladd"){const x=sermao(v),pre={ref:refSel(),t:textoSel()};x.topicos.push({id:uid(),titulo:pre.ref,ref:pre.ref,blocos:[{id:uid(),tipo:"biblico",ref:pre.ref,t:pre.t,aut:""}]});x.at=Date.now();salvar();fechar();V.sel=new Set();renderBiblia();toast("Adicionado a “"+(x.titulo||"Sem título")+"”",2600);}
@@ -2598,12 +2616,12 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="51";
+const VER="52";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
 const hsh=o=>{const r=Object.assign({},o);delete r.u;const t=JSON.stringify(r);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
-const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr,fy:c.fy||0,fo:c.fo||0,fr:c.fr||0,foto:c.foto||""};};
+const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr,fy:c.fy||0,fo:c.fo||0,fr:c.fr||0,foto:c.foto||"",dest:c.dest||{}};};
 function paraLixeira(o){db.lixeira=(db.lixeira||[]).filter(x=>x.id!==o.id);db.lixeira.unshift(Object.assign(JSON.parse(JSON.stringify(o)),{delAt:Date.now()}));db.lixeira=db.lixeira.slice(0,40);}
 function syncTouch(){
   const m=syncMeta(),now=Date.now(),vistos=new Set();
@@ -2626,7 +2644,7 @@ function syncApply(){
   SY.rq.forEach(r=>{
     const id=r.id;
     if(id==="_cfg"){
-      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr","fy","fo","fr","foto"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
+      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr","fy","fo","fr","foto","dest"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
       m.p._cfg=Math.max(m.p._cfg===undefined?-1:m.p._cfg,r.u);return;
     }
     const loc=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||(db.ilus||[]).find(x=>x.id===id);
