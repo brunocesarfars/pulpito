@@ -691,6 +691,9 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 :root[data-tema="claro"] .rd p.hl1{background:#f6e3a8}:root[data-tema="claro"] .rd p.hl2{background:#bfe8cc}:root[data-tema="claro"] .rd p.hl3{background:#f6cadb}
 #selbar .cor{min-width:34px!important;width:34px;height:34px;padding:0!important;border-radius:50%!important;justify-content:center;border:2px solid var(--line)}
 #selbar .c1{background:#f5d34a}#selbar .c2{background:#5ec882}#selbar .c3{background:#f078a0}#selbar .c0{background:none}
+
+.rd p .cmp{display:block;margin-top:3px;padding-left:10px;border-left:2px solid var(--gold-line);font-size:.86em;color:var(--muted);line-height:1.45}
+.rd p .cmp i{font-style:normal;font-weight:700;color:var(--gold);font-size:.8em;margin-right:4px}
 </style>
 </head>
 <body>
@@ -754,6 +757,16 @@ async function trocaVersao(v){
   db.cfg.versao=v;BN=null;salvar();
   if(V.tela==="edit")rerender();else render();
   refazSheet();
+}
+async function cmpCarrega(v){
+  const info=versList()[v];if(!info)return;
+  if(v!=="acf"&&!BIBS[v]){
+    try{
+      if(info.custom){const d=await idbGet(v);if(!d)throw 0;BIBS[v]=d;}
+      else{toast("Baixando "+info.n+"...",8000);const r=await fetch(VERS[v].f);if(!r.ok)throw 0;BIBS[v]=await r.json();}
+    }catch(e){toast("Não consegui carregar "+info.n+". Conecte à internet uma vez.",3200);return;}
+  }
+  V.cmp=v;fechar();const y=scrollY;renderBiblia();scrollTo(0,y);
 }
 function parseRef(ref){
   const m=(ref||"").match(/^\s*((?:[123]\s?)?[A-Za-zÀ-ú]+)\.?\s*(\d{1,3})(?:\s*[:.,]\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?)?/);
@@ -1015,11 +1028,12 @@ function renderBiblia(){
     <div class="bhero" style="--c:${ct[3]}"><div><small>${ct[4]==="AT"?"Antigo":"Novo"} Testamento · ${ct[2]}</small><b>${B[V.bk].length} capítulos</b></div></div>
     <div class="cgrid">${B[V.bk].map((_,i)=>`<button class="${u===i+1?"ult":""} ${mc===i+1?"mk":""}" data-a="bcap" data-v="${i+1}">${i+1}</button>`).join("")}</div>`;
   }else{
-    const vs=B[V.bk][V.ch-1]||[],k=V.bk+"."+V.ch+".",mk=c.marca&&c.marca.l===V.bk&&c.marca.c===V.ch;
+    const cvk=V.cmp&&V.cmp!==(c.versao||"acf")&&(V.cmp==="acf"||BIBS[V.cmp])?V.cmp:null,cv=cvk?bib(cvk):null,cvn=cvk?(versList()[cvk]||{n:cvk}).n:"",vs=B[V.bk][V.ch-1]||[],k=V.bk+"."+V.ch+".",mk=c.marca&&c.marca.l===V.bk&&c.marca.c===V.ch;
     h=`<div class="top"><button class="ib" data-a="bvolta" aria-label="Voltar">←</button><h1 style="font-size:20px">${LIVROS[V.bk]} ${V.ch}</h1>
     <button class="ib" data-a="bmenos" aria-label="Diminuir letra">A−</button><button class="ib" data-a="bmais" aria-label="Aumentar letra">A+</button>
     <button class="ib ${mk?"star on":""}" style="position:static" data-a="bmarca" aria-label="Marcar capítulo">${mk?"★":"☆"}</button></div>
-    <div class="rd" style="--bf:${c.bf}px">${vs.map((t,i)=>`<p class="${c.dest[k+(i+1)]?"hl hl"+(+c.dest[k+(i+1)]||1):""} ${V.alvo===i+1?"alvo":""} ${V.sel.has(i+1)?"sel":""}" data-a="vs" data-v="${i+1}"><sup>${i+1}</sup>${esc(t)}</p>`).join("")}</div>
+    <div class="rd" style="--bf:${c.bf}px">${vs.map((t,i)=>`<p class="${c.dest[k+(i+1)]?"hl hl"+(+c.dest[k+(i+1)]||1):""} ${V.alvo===i+1?"alvo":""} ${V.sel.has(i+1)?"sel":""}" data-a="vs" data-v="${i+1}"><sup>${i+1}</sup>${esc(t)}${cv?`<span class="cmp"><i>${esc(cvn)}</i> ${esc((cv[V.bk]&&cv[V.bk][V.ch-1]&&cv[V.bk][V.ch-1][i])||"—")}</span>`:""}</p>`).join("")}</div>
+    <div class="bar" style="margin:10px 0 0"><button class="btn" data-a="bcmp">⇄ ${cv?"Comparando com "+esc(cvn)+" · trocar":"Comparar versão"}</button>${cv?`<button class="btn" data-a="bcmpx" aria-label="Parar de comparar">✕</button>`:""}</div>
     <div class="pnav" style="padding:0"><button class="btn" data-a="bant">‹ Anterior</button><button class="btn gold" data-a="bprox">Próximo ›</button></div>
     <div class="seg" style="margin-top:14px">${Object.keys(versList()).map(k=>`<button class="${(db.cfg.versao||"acf")===k?"on":""}" data-a="versao" data-v="${k}">${versList()[k].n}</button>`).join("")}</div><p class="meta">Toque nos versículos para selecionar. ${(versList()[db.cfg.versao||"acf"]||VERS.acf).d}.</p>`;
   }
@@ -2144,7 +2158,7 @@ document.addEventListener("copy",e=>{
   if(!(V.tela==="lista"&&V.tab==="biblia"&&V.ch!==null))return;
   const sel=getSelection();if(!sel||!sel.rangeCount||sel.isCollapsed)return;
   const r=sel.getRangeAt(0),ps=[...document.querySelectorAll(".rd p")].filter(p=>r.intersectsNode(p)),nums=[],txt=[];
-  ps.forEach(p=>{const tn=p.lastChild;if(!tn)return;let t=tn.textContent,a=0,b=t.length;if(r.startContainer===tn)a=r.startOffset;if(r.endContainer===tn)b=r.endOffset;t=t.slice(a,b).trim();if(t){nums.push(+p.dataset.v);txt.push(t);}});
+  ps.forEach(p=>{const tn=p.childNodes[1];if(!tn||tn.nodeType!==3)return;let t=tn.textContent,a=0,b=t.length;if(r.startContainer===tn)a=r.startOffset;if(r.endContainer===tn)b=r.endOffset;t=t.slice(a,b).trim();if(t){nums.push(+p.dataset.v);txt.push(t);}});
   if(!nums.length)return;
   e.preventDefault();e.clipboardData.setData("text/plain",textoCopia(nums,txt));
 });
@@ -2397,7 +2411,7 @@ document.addEventListener("click",e=>{
   else if(a==="pdf"){exportarPDF(cur());}
   else if(a==="selx"){V.sel=new Set();renderBiblia();}
   else if(a==="selhl"){const ks=[...V.sel].map(n=>V.bk+"."+V.ch+"."+n);ks.forEach(k=>{if(+v)db.cfg.dest[k]=+v;else delete db.cfg.dest[k];});salvar();V.sel=new Set();const y=scrollY;renderBiblia();scrollTo(0,y);toast(+v?"Grifado":"Grifo removido");}
-  else if(a==="selcop"){const ns=[...V.sel].sort((a,b)=>a-b),vs0=bib()[V.bk][V.ch-1]||[],t=textoCopia(ns,ns.map(n=>vs0[n-1]));const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy");}catch(x){}ta.remove();try{navigator.clipboard.writeText(t);ok=true;}catch(x){}toast(ok?"Versículos copiados":"Não consegui copiar");}
+  else if(a==="selcop"){let ns=[...V.sel].sort((a,b)=>a-b),vs0=bib()[V.bk][V.ch-1]||[],t=textoCopia(ns,ns.map(n=>vs0[n-1]));{const ck=V.cmp&&V.cmp!==(db.cfg.versao||"acf")&&(V.cmp==="acf"||BIBS[V.cmp])?V.cmp:null;if(ck){const o=(bib(ck)[V.bk]||[])[V.ch-1]||[];t+="\n\n"+refNums(ns)+" "+(versList()[ck]||{n:ck}).n+"\n"+ns.map(n=>n+" "+(o[n-1]||"—")).join("\n");}}const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy");}catch(x){}ta.remove();try{navigator.clipboard.writeText(t);ok=true;}catch(x){}toast(ok?"Versículos copiados":"Não consegui copiar");}
   else if(a==="selserm")abrirSelSermao();
   else if(a==="selnovo"){const pre={ref:refSel(),t:textoSel()};fechar();V.sel=new Set();renderBiblia();abrirNovo(pre);}
   else if(a==="seladd"){const x=sermao(v),pre={ref:refSel(),t:textoSel()};x.topicos.push({id:uid(),titulo:pre.ref,ref:pre.ref,blocos:[{id:uid(),tipo:"biblico",ref:pre.ref,t:pre.t,aut:""}]});x.at=Date.now();salvar();fechar();V.sel=new Set();renderBiblia();toast("Adicionado a “"+(x.titulo||"Sem título")+"”",2600);}
@@ -2527,6 +2541,9 @@ document.addEventListener("click",e=>{
   else if(a==="vincok"){db.eventos.find(e=>e.id===v).msgId=V.id;salvar();fechar();rerender();}
   else if(a==="desv"){db.eventos.find(e=>e.id===v).msgId="";salvar();rerender();}
   else if(a==="versao"){trocaVersao(v);}
+  else if(a==="bcmp"){const cur0=db.cfg.versao||"acf",vl=versList();$("mb").innerHTML=`<h3>Comparar com…</h3><p class="meta" style="margin-bottom:10px">Mostra a outra versão embaixo de cada versículo.</p><div class="rows">${Object.keys(vl).filter(k=>k!==cur0).map(k=>linha(ico("book",18),esc(vl[k].n),esc(vl[k].d||""),"bcmpv",k)).join("")}</div><div class="bar" style="margin-top:14px"><button class="btn gold" data-a="fechar">Fechar</button></div>`;$("modal").classList.add("show");}
+  else if(a==="bcmpv"){cmpCarrega(v);}
+  else if(a==="bcmpx"){V.cmp=null;const y=scrollY;renderBiblia();scrollTo(0,y);}
   else if(a==="bat"){V.at=v;renderBiblia();}
   else if(a==="bliv"){V.sel=new Set();V.bk=+v;V.ch=null;renderBiblia();scrollTo(0,0);}
   else if(a==="bcap"){V.sel=new Set();V.ch=+v;db.cfg.ult={l:V.bk,c:V.ch};salvar();renderBiblia();scrollTo(0,0);}
@@ -2616,7 +2633,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="52";
+const VER="53";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
