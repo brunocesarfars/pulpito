@@ -694,6 +694,11 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 
 .rd p .cmp{display:block;margin-top:3px;padding-left:10px;border-left:2px solid var(--gold-line);font-size:.86em;color:var(--muted);line-height:1.45}
 .rd p .cmp i{font-style:normal;font-weight:700;color:var(--gold);font-size:.8em;margin-right:4px}
+
+/* ---- v55: estados de salvamento ---- */
+.salvo.err{color:var(--red,#e5604d);font-weight:700}.salvo.warn{color:#e0a93b}.salvo.pend{color:var(--muted)}
+#savebar{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:60;background:#3a1612;color:#ffd9d3;border:1px solid #e5604d;border-radius:14px;padding:10px 12px;display:grid;gap:6px;font-size:13.5px;box-shadow:0 14px 40px -12px #000d}
+#savebar div{display:flex;gap:8px;flex-wrap:wrap}#savebar button{background:#e5604d;color:#fff;border-radius:10px;padding:8px 12px;font-weight:700}
 </style>
 </head>
 <body>
@@ -736,7 +741,7 @@ function refDe(txt){
 const VERS={acf:{n:"ACF",d:"Almeida Corrigida Fiel (português)"},kjv:{n:"KJV",d:"King James (inglês)",f:"bib-kjv.json"},bbe:{n:"BBE",d:"Bible in Basic English",f:"bib-bbe.json"}};
 const BMISS=new Set();
 const versList=()=>Object.assign({},VERS,Object.fromEntries(((db.cfg&&db.cfg.custom)||[]).filter(c=>!BMISS.has(c.k)).map(c=>[c.k,{n:c.n,d:c.n+" (sua cópia, só neste aparelho)",custom:true}])));
-function idb(){return new Promise((ok,err)=>{const r=indexedDB.open("pulpito",1);r.onupgradeneeded=()=>r.result.createObjectStore("bib");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
+function idb(){return new Promise((ok,err)=>{const r=indexedDB.open(idbNome("pulpito"),1);r.onupgradeneeded=()=>r.result.createObjectStore("bib");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
 async function idbGet(k){const d=await idb();return new Promise((ok,err)=>{const q=d.transaction("bib").objectStore("bib").get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>err(q.error);});}
 async function idbSet(k,v){const d=await idb();return new Promise((ok,err)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").put(v,k);t.oncomplete=()=>ok();t.onerror=()=>err(t.error);});}
 async function idbDel(k){const d=await idb();return new Promise((ok)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").delete(k);t.oncomplete=()=>ok();});}
@@ -784,7 +789,13 @@ function textoRef(ref,v){
   return o.join("\n");
 }
 /* ---------- Dados ---------- */
-const LS="pulpito.v1";
+const LSB="pulpito.v1";
+/* Espaço de dados: "" = uso sem login (as chaves antigas, intactas); uid = dados daquela conta Google */
+const UIDOK=u=>typeof u==="string"&&/^[A-Za-z0-9_-]{6,128}$/.test(u);
+let NS=(()=>{try{const u=localStorage.getItem("pulpito.acc")||"";return UIDOK(u)?u:"";}catch(e){return "";}})();
+const lsk=()=>NS?LSB+".u."+NS:LSB;
+const nsk=b=>NS?b+".u."+NS:b;
+const idbNome=(b,ns)=>{const n=ns===undefined?NS:ns;return n?b+"."+n:b;};
 function aplicaTema(){
   let t=(db.cfg&&db.cfg.tema)||"auto";
   if(t==="auto")t=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"claro":"escuro";
@@ -825,7 +836,8 @@ function blocosDeNotas(n){
   return out;
 }
 let db={sermoes:[],semeado:false};
-try{const r=localStorage.getItem(LS);if(r)db=JSON.parse(r);}catch(e){}
+let CORROMPIDO=false;
+try{const r=localStorage.getItem(lsk());if(r){try{db=JSON.parse(r);if(!db||typeof db!=="object"||Array.isArray(db))throw 0;}catch(e){CORROMPIDO=true;db={sermoes:[],semeado:false};try{localStorage.setItem(lsk()+".corrompido",r);}catch(x){}}}}catch(e){}
 if(!db.semeado&&!db.sermoes.length){
   db.semeado=true;
   db.sermoes.push({id:uid(),ex:1,titulo:"A Fé em Meio à Tempestade",assunto:"Confiança em Deus nas crises da vida",pasta:"Exemplos",min:30,at:Date.now(),status:"pronto",base:"Marcos 4:35-41",
@@ -858,8 +870,32 @@ function ajustar(){
 ajustar();aplicaTema();
 try{matchMedia("(prefers-color-scheme: light)").addEventListener("change",aplicaTema);}catch(e){}
 let saveT;
-function salvar(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}if(typeof syncTouch==="function")syncTouch();},250);}
-function salvarJa(){clearTimeout(saveT);try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}if(typeof syncTouch==="function"){try{syncTouch();}catch(e){}}}
+const SV={dirty:false,erro:"",ult:0,reserva:false,tRes:0};
+function gravaLocal(){
+  try{localStorage.setItem(lsk(),JSON.stringify(db));SV.dirty=false;SV.erro="";SV.ult=Date.now();pintaSalvo();return true;}
+  catch(e){SV.erro=(e&&(e.name==="QuotaExceededError"||e.code===22||e.code===1014))?"Sem espaço de armazenamento neste aparelho.":"O armazenamento deste aparelho não está disponível.";reservaIDB();pintaSalvo();return false;}
+}
+function reservaIDB(){if(Date.now()-SV.tRes<30000)return;SV.tRes=Date.now();Promise.resolve().then(()=>snapSalva("emergencia")).then(ok=>{SV.reserva=!!ok;pintaSalvo();}).catch(()=>{});}
+function salvoEstado(){
+  if(SV.erro)return{t:"Falha ao salvar",c:"err"};
+  if(SV.dirty)return{t:"Salvando…",c:"pend"};
+  if(typeof SY==="undefined"||!SY.user)return{t:"Salvo neste aparelho",c:"ok"};
+  if(SY.pausa)return{t:"Salvo no aparelho · nuvem em espera",c:"warn"};
+  if(SY.estado==="erro")return{t:"Salvo no aparelho · falha na nuvem",c:"warn"};
+  if(SY.estado==="env"||SY.pend)return{t:"Salvo no aparelho · enviando…",c:"pend"};
+  if(SY.estado==="off")return{t:"Salvo no aparelho · sem internet",c:"warn"};
+  return{t:"Sincronizado ✓",c:"ok"};
+}
+function pintaSalvo(){
+  const e=salvoEstado(),sv=document.getElementById("salvo");if(sv){sv.textContent=e.t;sv.className="salvo "+e.c;}
+  let b=document.getElementById("savebar");
+  if(!SV.erro){if(b)b.remove();return;}
+  if(!b){b=document.createElement("div");b.id="savebar";b.setAttribute("role","alert");document.body.appendChild(b);}
+  b.innerHTML=`<b>⚠ ${esc(SV.erro)}</b><span>Suas alterações estão só na memória${SV.reserva?" (e numa cópia de emergência)":""}. Baixe uma cópia antes de fechar o app.</span><div><button data-a="svbaixar">Baixar cópia agora</button><button data-a="svretry">Tentar salvar de novo</button></div>`;
+}
+function salvar(){SV.dirty=true;pintaSalvo();clearTimeout(saveT);saveT=setTimeout(()=>{gravaLocal();if(typeof syncTouch==="function"){try{syncTouch();}catch(e){}}},250);}
+function salvarJa(){clearTimeout(saveT);const ok=gravaLocal();if(typeof syncTouch==="function"){try{syncTouch();}catch(e){}}return ok;}
+addEventListener("beforeunload",e=>{if(SV.dirty)gravaLocal();if(SV.erro){e.preventDefault();e.returnValue="";}});
 addEventListener("pagehide",salvarJa);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)salvarJa();});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
@@ -1162,7 +1198,7 @@ function renderEdit(y){
   const s=cur();if(!s){V.tela="lista";return render();}
   const tempos=[20,30,40,50,60,90],assuntos=[...new Set(db.sermoes.map(x=>x.assunto).filter(Boolean))],evs=db.eventos.filter(e=>e.msgId===s.id).sort((a,b)=>a.data.localeCompare(b.data));
   const w=palS(s),est=minEst(w),pct=Math.min(100,Math.round(est/s.min*100)),estado=!w?"vazio":est>s.min*1.1?"alto":est<s.min*.6?"baixo":"ok";
-  let h=`<div class="top"><button class="ib" data-a="voltar" aria-label="Voltar">←</button><span style="flex:1"></span><span class="salvo" id="salvo">Salvo ✓</span>
+  let h=`<div class="top"><button class="ib" data-a="voltar" aria-label="Voltar">←</button><span style="flex:1"></span><span class="salvo ${salvoEstado().c}" id="salvo">${esc(salvoEstado().t)}</span>
     <button class="ib fv ${s.fav?"on":""}" data-a="fav" data-v="${s.id}" aria-label="Favoritar">${ico("star",20)}</button><button class="ib" data-a="pdf" aria-label="Exportar PDF">${ico("pdf",20)}</button><button class="btn gold pg" data-a="pregar">${ico("play",15)} Pregar</button></div>
   <input class="in title" id="f-titulo" placeholder="Título da mensagem" value="${esc(s.titulo)}">
   <div class="chips" style="margin:8px 0 10px"><button class="chip detb" data-a="det">${V.det?"▴ Fechar detalhes":"⚙ Detalhes"}</button><span class="chip st-${s.status}">${stNome(s.status)}</span>${s.base?`<span class="chip">📖 ${esc(s.base)}</span>`:""}${s.assunto?`<span class="chip">${esc(s.assunto)}</span>`:""}${s.pasta?`<span class="chip">📁 ${esc(s.pasta)}</span>`:""}</div>
@@ -1679,10 +1715,10 @@ const IAP={
   gemini:{n:"Gemini",m:"gemini-3.5-flash-lite",l:"aistudio.google.com/apikey",u:"https://aistudio.google.com/apikey",g:"Tem uso gratuito com limite diário. É a opção mais simples.",s:["Abra aistudio.google.com/apikey e entre com a sua conta Google.","Toque em Criar chave de API (Create API key). Se pedir um projeto, aceite o padrão.","Toque no ícone de copiar ao lado da chave (começa com AIza ou AQ.).","Volte aqui, cole no campo da chave e toque em Salvar e começar."]},
   openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys",u:"https://platform.openai.com/api-keys",g:"Pago por uso (a assinatura do ChatGPT Plus não vale aqui).",s:["Abra platform.openai.com e entre com a sua conta.","Adicione crédito em Billing.","Vá em API keys e toque em Create new secret key.","Copie a chave (começa com sk-)."]}
 };
-function iaCfg(){if(!IA.cfg){try{IA.cfg=JSON.parse(localStorage.getItem("pulpito.ia")||"{}");}catch(e){IA.cfg={};}}return IA.cfg;}
+function iaCfg(){if(!IA.cfg){try{IA.cfg=JSON.parse(localStorage.getItem(nsk("pulpito.ia"))||"{}");}catch(e){IA.cfg={};}}return IA.cfg;}
 function iaSave(modo){
   if(modo!=="nuvem")iaCfg().u=Date.now();
-  try{localStorage.setItem("pulpito.ia",JSON.stringify(IA.cfg));}catch(e){}
+  try{localStorage.setItem(nsk("pulpito.ia"),JSON.stringify(IA.cfg));}catch(e){}
   if(modo!=="nuvem")iaPush(modo==="tira");
 }
 async function iaPush(vazio){
@@ -2258,7 +2294,7 @@ async function compartilharBackup(){
   baixarBackup();
 }
 /* Cópias automáticas (banco separado, não sincroniza) */
-function snapDb(){return new Promise((ok,err)=>{const r=indexedDB.open("pulpito-snap",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
+function snapDb(ns){return new Promise((ok,err)=>{const r=indexedDB.open(idbNome("pulpito-snap",ns),1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
 function snapReq(d,modo,f){return new Promise((ok,err)=>{const t=d.transaction("s",modo),st=t.objectStore("s"),q=f(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>err(t.error);});}
 async function snapSalva(motivo){
   try{
@@ -2267,7 +2303,7 @@ async function snapSalva(motivo){
     await snapReq(d,"readwrite",st=>st.put({t:k,m:motivo||"auto",n:db.sermoes.length,e:db.eventos.length,j:JSON.stringify(db)},k));
     const ks=(await snapReq(d,"readonly",st=>st.getAllKeys())||[]).sort((a,b)=>b-a);
     if(ks.length>8)await snapReq(d,"readwrite",st=>{ks.slice(8).forEach(x=>st.delete(x));});
-    d.close();try{localStorage.setItem("pulpito.snap",String(k));}catch(e){}
+    d.close();try{localStorage.setItem(nsk("pulpito.snap"),String(k));}catch(e){}
     return true;
   }catch(e){return false;}
 }
@@ -2443,6 +2479,8 @@ document.addEventListener("click",e=>{
   else if(a==="frec")recuo("rec");
   else if(a==="fbar")recuo("bar");
   else if(a==="railt"){db.cfg.rail=!db.cfg.rail;salvar();$("preach").classList.toggle("railoff",!!db.cfg.rail&&!P.roll);}
+  else if(a==="svbaixar")baixarBackup();
+  else if(a==="svretry"){if(gravaLocal())toast("Salvo neste aparelho",2200);else toast("Ainda não foi possível salvar",2800);}
   else if(a==="bmais"){const k=b.closest(".bk");if(k)k.classList.toggle("mais");}
   else if(a==="tmais"){const m=b.closest(".tpb").querySelector(".tmenu");if(m)m.classList.toggle("ver");}
   else if(a==="ins")inserirBloco(v);
@@ -2608,7 +2646,7 @@ document.addEventListener("input",e=>{
     if(f==="html")bl.t=limpa(t.innerHTML);else bl[f]=t.value;
   }else return;
   s.at=Date.now();salvar();
-  const sv=$("salvo");if(sv){sv.textContent="Salvo ✓";}
+  pintaSalvo();
 });
 /* Deslizar para trocar de tópico */
 let tx=null;
@@ -2635,8 +2673,8 @@ const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpit
 const FBV="10.12.5";
 const VER="54";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
-function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
-function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
+function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
+function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
 const hsh=o=>{const r=Object.assign({},o);delete r.u;const t=JSON.stringify(r);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
 const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr,fy:c.fy||0,fo:c.fo||0,fr:c.fr||0,foto:c.foto||"",dest:c.dest||{}};};
 function paraLixeira(o){db.lixeira=(db.lixeira||[]).filter(x=>x.id!==o.id);db.lixeira.unshift(Object.assign(JSON.parse(JSON.stringify(o)),{delAt:Date.now()}));db.lixeira=db.lixeira.slice(0,40);}
@@ -2688,7 +2726,7 @@ function syncApply(){
     ajustar();
     aplicados.forEach(id=>{const o=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||db.ilus.find(x=>x.id===id);if(o)m.h[id]=hsh(o);});
     if(cfgMud){m.h._cfg=hsh({d:cfgSync()});aplicaTema();}
-    try{localStorage.setItem(LS,JSON.stringify(db));}catch(e){}
+    gravaLocal();
     if(!P&&V.tela==="lista"&&!$("modal").classList.contains("show"))render();
   }
   syncSave();
@@ -2843,9 +2881,10 @@ document.addEventListener("visibilitychange",()=>{
   else{syncPush();if(SY.fs&&Date.now()-(SY.rs||0)>15000)syncOuve(SY.user,false);}
 });
 window.addEventListener("pagehide",()=>{if(SY.user){clearTimeout(SY.pushT);syncPush();}});
-setTimeout(()=>{let u=0;try{u=+localStorage.getItem("pulpito.snap")||0;}catch(e){}if(Date.now()-u>6048e5)snapSalva("auto");},5000);
+setTimeout(()=>{let u=0;try{u=+localStorage.getItem(nsk("pulpito.snap"))||0;}catch(e){}if(Date.now()-u>6048e5)snapSalva("auto");},5000);
 try{if(JSON.parse(localStorage.getItem("pulpito.sync")||"{}").logado&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
 render();carregaPropriasBiblias();
+if(CORROMPIDO)setTimeout(()=>toast("Não consegui ler os dados deste aparelho. Guardei uma cópia deles e não apaguei nada. Restaure uma cópia em Mais.",7000),800);
 if(!db.cfg.nome&&!db.cfg.nomeAsk){db.cfg.nomeAsk=true;salvar();setTimeout(abrirNome,700);}
 async function verNova(){try{const r=await fetch("sw.js?_="+Date.now(),{cache:"no-store"}),t=await r.text(),m=t.match(/pulpito-v(\d+)/);if(m&&+m[1]>+VER)mostraAtualiza();}catch(e){}}
 function mostraAtualiza(w){
