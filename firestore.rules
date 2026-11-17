@@ -1,0 +1,51 @@
+rules_version = '2';
+// PROPOSTA de regras para o Púlpito. NÃO foram aplicadas em produção por mim:
+// publique você mesmo em Firebase Console → Firestore Database → Regras → Publicar (veja docs/FIREBASE.md).
+// Caminhos reais usados pelo app: users/{uid}/itens/{id}, users/{uid}/config/ia, users/{uid}/biblias/{id}.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function dono(uid) { return request.auth != null && request.auth.uid == uid; }
+
+    match /users/{uid} {
+
+      // Sermões, eventos, ilustrações e ajustes. Só a revisão 2, sempre crescendo: um aparelho com versão antiga
+      // do app (que não envia "rev") passa a ser recusado e não consegue sobrescrever edições novas.
+      match /itens/{id} {
+        allow read: if dono(uid);
+        allow create: if dono(uid) && request.resource.data.v == 2
+          && request.resource.data.rev is int && request.resource.data.rev >= 1
+          && request.resource.data.u is number
+          && request.resource.data.keys().hasOnly(['v','rev','k','u','d','del'])
+          && (request.resource.data.get('d', '') is string)
+          && (request.resource.data.get('d', '').size() < 900000);
+        allow update: if dono(uid) && request.resource.data.v == 2
+          && request.resource.data.rev is int
+          && request.resource.data.rev == resource.data.get('rev', 0) + 1
+          && request.resource.data.u is number
+          && request.resource.data.keys().hasOnly(['v','rev','k','u','d','del'])
+          && (request.resource.data.get('d', '') is string)
+          && (request.resource.data.get('d', '').size() < 900000);
+        allow delete: if false;   // exclusão é um documento {del:true}, para os outros aparelhos ficarem sabendo
+      }
+
+      // Chave de IA (só existe se você ligou "sincronizar com a conta").
+      match /config/ia {
+        allow read, delete: if dono(uid);
+        allow create, update: if dono(uid)
+          && request.resource.data.keys().hasOnly(['v','u','p','k','m'])
+          && request.resource.data.k is string && request.resource.data.k.size() < 400;
+      }
+
+      // Bíblias próprias, em partes.
+      match /biblias/{id} {
+        allow read, delete: if dono(uid);
+        allow create, update: if dono(uid)
+          && request.resource.data.keys().hasOnly(['k','i','d','n','total'])
+          && request.resource.data.get('d', '').size() < 900000;
+      }
+    }
+
+    match /{outro=**} { allow read, write: if false; }
+  }
+}

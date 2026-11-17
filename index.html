@@ -744,7 +744,7 @@ const versList=()=>Object.assign({},VERS,Object.fromEntries(((db.cfg&&db.cfg.cus
 function idb(){return new Promise((ok,err)=>{const r=indexedDB.open(idbNome("pulpito"),1);r.onupgradeneeded=()=>r.result.createObjectStore("bib");r.onsuccess=()=>ok(r.result);r.onerror=()=>err(r.error);});}
 async function idbGet(k){const d=await idb();return new Promise((ok,err)=>{const q=d.transaction("bib").objectStore("bib").get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>err(q.error);});}
 async function idbSet(k,v){const d=await idb();return new Promise((ok,err)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").put(v,k);t.oncomplete=()=>ok();t.onerror=()=>err(t.error);});}
-async function idbDel(k){const d=await idb();return new Promise((ok)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").delete(k);t.oncomplete=()=>ok();});}
+async function idbDel(k){const d=await idb();return new Promise((ok)=>{const t=d.transaction("bib","readwrite");t.objectStore("bib").delete(k);t.oncomplete=()=>ok();t.onerror=()=>ok();});}
 let BIBS={},BN=null,BNv=null;
 function bib(v){
   v=v||db.cfg.versao||"acf";
@@ -866,6 +866,95 @@ function ajustar(){
       t.blocos.forEach(b=>{if(!b.id)b.id=uid();if(!TIPOS[b.tipo])b.tipo="texto";if(typeof b.t!=="string")b.t=b.t==null?"":String(b.t);if(b.tipo==="biblico"&&typeof b.ref!=="string")b.ref="";});
     });
   });
+}
+/* ---------- Validação de dados vindos de fora (backup, nuvem) ----------
+   Limites: arquivo 20 MB; 2000 sermões; 200 tópicos/sermão; 500 blocos/tópico; 5000 eventos; 5000 ilustrações;
+   texto de bloco 500 mil caracteres; títulos 300; campos curtos 200; foto 150 mil caracteres. Acima disso o arquivo é recusado. */
+const LIM={arq:20e6,serm:2000,top:200,blo:500,ev:5000,il:5000,pas:300,hist:2000,lix:200,txt:5e5,tit:300,curto:200,foto:15e4};
+const idOk=x=>typeof x==="string"&&/^[A-Za-z0-9_-]{1,64}$/.test(x);
+const fotoOk=f=>typeof f==="string"&&f.length<=LIM.foto&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(f);
+class VErro extends Error{}
+function vStr(v,max,campo,obrig){
+  if(v===undefined||v===null){if(obrig)throw new VErro("Falta o campo "+campo);return "";}
+  if(typeof v!=="string")throw new VErro("O campo "+campo+" deveria ser texto");
+  if(v.length>max)throw new VErro("O campo "+campo+" é grande demais");
+  return v;
+}
+const vNum=(v,min,max,pad)=>{const n=+v;return Number.isFinite(n)&&v!==null&&v!==""&&v!==false?Math.min(max,Math.max(min,n)):pad;};
+const vIds=new Set();
+function vId(v,usados,map){
+  let id=v;
+  if(!idOk(id)||usados.has(id)){id=uid();while(usados.has(id))id=uid();if(map&&idOk(v)&&!map.has(v))map.set(v,id);}
+  else if(map&&!map.has(id))map.set(id,id);
+  usados.add(id);return id;
+}
+function vBloco(b,usados){
+  if(!b||typeof b!=="object"||Array.isArray(b))throw new VErro("Bloco inválido");
+  const o={id:vId(b.id,usados),tipo:TIPOS[b.tipo]?b.tipo:"texto",t:vStr(b.t,LIM.txt,"texto do bloco")};
+  if(o.tipo==="texto")o.t=limpa(o.t);
+  if(b.ref!==undefined)o.ref=vStr(b.ref,LIM.curto,"referência");
+  if(b.aut!==undefined)o.aut=vStr(b.aut,LIM.curto,"autor");
+  if(b.rec)o.rec=1;
+  return o;
+}
+function vSermao(x,usados,map){
+  if(!x||typeof x!=="object"||Array.isArray(x))throw new VErro("Sermão inválido");
+  if(!Array.isArray(x.topicos||[]))throw new VErro("Lista de tópicos inválida");
+  const tops=x.topicos||[];if(tops.length>LIM.top)throw new VErro("Tópicos demais em um sermão");
+  const o={id:vId(x.id,usados,map),titulo:vStr(x.titulo,LIM.tit,"título"),assunto:vStr(x.assunto,LIM.tit,"assunto"),base:vStr(x.base,LIM.curto,"texto base"),pasta:vStr(x.pasta,LIM.curto,"pasta"),
+    status:STATUS.some(e=>e[0]===x.status)?x.status:"rascunho",min:Math.round(vNum(x.min,1,600,30)),at:vNum(x.at,0,9e15,Date.now()),aberto:vNum(x.aberto,0,9e15,0),fav:!!x.fav,
+    serie:vStr(x.serie,LIM.curto,"série"),serieN:Math.round(vNum(x.serieN,0,9999,0)),ideia:vStr(x.ideia,LIM.txt,"ideia central"),modo:x.modo==="rolagem"?"rolagem":"topicos"};
+  if(x.ex)o.ex=1;
+  const hs=Array.isArray(x.hist)?x.hist:[];if(hs.length>LIM.hist)throw new VErro("Histórico grande demais");
+  const hu=new Set();o.hist=hs.filter(h=>h&&typeof h==="object").map(h=>({id:vId(h.id,hu),data:/^\d{4}-\d{2}-\d{2}$/.test(h.data)?h.data:hoje(),local:vStr(h.local,LIM.curto,"local"),min:Math.round(vNum(h.min,0,1440,0))}));
+  const tu=new Set();
+  o.topicos=tops.filter(t=>t&&typeof t==="object").map(t=>{
+    const bl=Array.isArray(t.blocos)?t.blocos:[];if(bl.length>LIM.blo)throw new VErro("Blocos demais em um tópico");
+    const bu=new Set();
+    return {id:vId(t.id,tu),titulo:vStr(t.titulo,LIM.tit,"título do tópico"),ref:vStr(t.ref,LIM.curto,"referência do tópico"),blocos:bl.filter(b=>b&&typeof b==="object").map(b=>vBloco(b,bu))};
+  });
+  return o;
+}
+function vEvento(e,usados,map){
+  if(!e||typeof e!=="object"||Array.isArray(e))throw new VErro("Evento inválido");
+  return {id:vId(e.id,usados,map),titulo:vStr(e.titulo,LIM.tit,"título do evento"),data:/^\d{4}-\d{2}-\d{2}$/.test(e.data)?e.data:hoje(),hora:/^\d{2}:\d{2}$/.test(e.hora||"")?e.hora:"",local:vStr(e.local,LIM.curto,"local"),tema:vStr(e.tema,LIM.curto,"tema"),msgId:typeof e.msgId==="string"?e.msgId:""};
+}
+function vIlus(x,usados){
+  if(!x||typeof x!=="object"||Array.isArray(x))throw new VErro("Ilustração inválida");
+  return {id:vId(x.id,usados),tit:vStr(x.tit,LIM.tit,"título"),txt:vStr(x.txt,LIM.txt,"texto"),fonte:vStr(x.fonte,LIM.curto,"fonte"),tags:(Array.isArray(x.tags)?x.tags:[]).filter(t=>typeof t==="string"&&t.length<=60).slice(0,40),at:vNum(x.at,0,9e15,Date.now())};
+}
+const vLR=o=>o&&typeof o==="object"&&Number.isInteger(o.l)&&Number.isInteger(o.c)&&o.l>=0&&o.l<66&&o.c>=1&&o.c<=200?{l:o.l,c:o.c}:null;
+function vCfg(c){
+  c=c&&typeof c==="object"&&!Array.isArray(c)?c:{};const o={};
+  o.fonte=Math.round(vNum(c.fonte,10,80,19));o.bf=Math.round(vNum(c.bf,10,60,19));o.som=c.som!==false;
+  o.modo=["regressivo","progressivo"].includes(c.modo)?c.modo:"regressivo";
+  o.tema=["auto","claro","escuro"].includes(c.tema)?c.tema:"auto";
+  o.versao=typeof c.versao==="string"&&(/^(acf|kjv|bbe)$/.test(c.versao)||idOk(c.versao))?c.versao:"acf";
+  o.dest={};if(c.dest&&typeof c.dest==="object")Object.keys(c.dest).slice(0,40000).forEach(k=>{if(/^\d{1,2}\.\d{1,3}\.\d{1,3}$/.test(k)){const n=+c.dest[k];if(n>=1&&n<=3)o.dest[k]=Math.round(n);}});
+  o.marca=vLR(c.marca);o.ult=vLR(c.ult);o.ultBackup=vNum(c.ultBackup,0,9e15,0);
+  o.fy=Math.round(vNum(c.fy,0,600,0));o.fo=Math.round(vNum(c.fo,0,600,0));o.fr=Math.round(vNum(c.fr,0,600,0));
+  o.foto=fotoOk(c.foto)?c.foto:"";
+  o.nome=typeof c.nome==="string"?c.nome.slice(0,24):"";o.nomeAsk=!!c.nomeAsk;
+  o.agr=typeof c.agr==="string"&&c.agr.length<=20?c.agr:"todos";
+  o.custom=(Array.isArray(c.custom)?c.custom:[]).filter(x=>x&&idOk(x.k)&&typeof x.n==="string"&&x.n.length<=12).slice(0,20).map(x=>({k:x.k,n:x.n}));
+  return o;
+}
+/* Lê, valida e normaliza uma cópia inteira numa estrutura TEMPORÁRIA. Nunca toca no banco atual. */
+function validaBackup(d){
+  if(!d||typeof d!=="object"||Array.isArray(d))throw new VErro("O arquivo não é uma cópia do Púlpito");
+  if(!Array.isArray(d.sermoes))throw new VErro("Não encontrei a lista de sermões");
+  if(d.eventos!==undefined&&!Array.isArray(d.eventos))throw new VErro("A lista de eventos é inválida");
+  if(d.ilus!==undefined&&!Array.isArray(d.ilus))throw new VErro("A lista de ilustrações é inválida");
+  if(d.pastas!==undefined&&!Array.isArray(d.pastas))throw new VErro("A lista de pastas é inválida");
+  if(d.sermoes.length>LIM.serm||(d.eventos||[]).length>LIM.ev||(d.ilus||[]).length>LIM.il||(d.pastas||[]).length>LIM.pas||(d.lixeira||[]).length>LIM.lix*5)throw new VErro("A cópia tem registros demais");
+  const us=new Set(),map=new Map(),r={sermoes:[],eventos:[],ilus:[],pastas:[],lixeira:[],semeado:true};
+  d.sermoes.forEach(x=>r.sermoes.push(vSermao(x,us,map)));
+  const ue=new Set();(d.eventos||[]).forEach(x=>{const e=vEvento(x,ue,null);e.msgId=map.has(e.msgId)?map.get(e.msgId):(r.sermoes.some(z=>z.id===e.msgId)?e.msgId:"");r.eventos.push(e);});
+  const ui=new Set();(d.ilus||[]).forEach(x=>r.ilus.push(vIlus(x,ui)));
+  r.pastas=[...new Set((d.pastas||[]).filter(p=>typeof p==="string"&&p.length&&p.length<=LIM.curto))];
+  const ul=new Set();(Array.isArray(d.lixeira)?d.lixeira:[]).slice(0,LIM.lix).forEach(x=>{try{const o=vSermao(x,ul,null);o.delAt=vNum(x.delAt,0,9e15,Date.now());r.lixeira.push(o);}catch(e){}});
+  r.cfg=vCfg(d.cfg);
+  return r;
 }
 ajustar();aplicaTema();
 try{matchMedia("(prefers-color-scheme: light)").addEventListener("change",aplicaTema);}catch(e){}
@@ -1117,7 +1206,7 @@ function renderMais(){
   ${tile("tema","palette","Aparência",TEMAS[db.cfg.tema]||"Automático")}
   ${tile("biblia","book","Bíblia",(versList()[ver]||VERS.acf).n)}
   ${tile("preg","timer","Pregação","Sinal, tempo e letra")}
-  ${tile("ia","spark","Assistente de IA",iaCfg().k?"Com a sua chave neste aparelho":"Use o app da sua IA, sem custo extra","iaabrir")}
+  ${tile("ia","spark","Assistente de IA",iaCfg().k?(iaCfg().persist?"Chave guardada neste aparelho":"Chave só nesta sessão"):"Use o app da sua IA, sem custo extra","iaabrir")}
   ${tile("ilus","bulb","Ilustrações",(db.ilus||[]).length?(db.ilus.length+" guardadas"):"Histórias e citações","ilusabrir")}
   ${tile("mapa","book","Livros e capítulos","Resumo do que você já usou")}
   ${tile("lixeira","trash","Lixeira",(db.lixeira||[]).length?(db.lixeira.length+" sermão(ões) · 30 dias"):"Sermões excluídos")}
@@ -1158,7 +1247,7 @@ function abrirSheet(k){
 }
 const refazSheet=()=>{if(SHEET&&$("modal").classList.contains("show"))abrirSheet(SHEET);if(V.tela==="lista"&&V.tab==="mais")renderMais();};
 function avatarBtn(){
-  const f=db.cfg.foto,nm=(db.cfg.nome||"").trim();
+  const f=fotoOk(db.cfg.foto)?db.cfg.foto:"",nm=(db.cfg.nome||"").trim();
   return f?`<button class="av foto" data-a="nome" aria-label="Seu perfil" style="background-image:url(${f})"></button>`:`<button class="av" data-a="nome" aria-label="Seu perfil">${esc((nm[0]||"P").toUpperCase())}</button>`;
 }
 async function fotoProcessa(file){
@@ -1715,25 +1804,42 @@ const IAP={
   gemini:{n:"Gemini",m:"gemini-3.5-flash-lite",l:"aistudio.google.com/apikey",u:"https://aistudio.google.com/apikey",g:"Tem uso gratuito com limite diário. É a opção mais simples.",s:["Abra aistudio.google.com/apikey e entre com a sua conta Google.","Toque em Criar chave de API (Create API key). Se pedir um projeto, aceite o padrão.","Toque no ícone de copiar ao lado da chave (começa com AIza ou AQ.).","Volte aqui, cole no campo da chave e toque em Salvar e começar."]},
   openai:{n:"ChatGPT",m:"gpt-4.1-mini",l:"platform.openai.com/api-keys",u:"https://platform.openai.com/api-keys",g:"Pago por uso (a assinatura do ChatGPT Plus não vale aqui).",s:["Abra platform.openai.com e entre com a sua conta.","Adicione crédito em Billing.","Vá em API keys e toque em Create new secret key.","Copie a chave (começa com sk-)."]}
 };
-function iaCfg(){if(!IA.cfg){try{IA.cfg=JSON.parse(localStorage.getItem(nsk("pulpito.ia"))||"{}");}catch(e){IA.cfg={};}}return IA.cfg;}
-function iaSave(modo){
-  if(modo!=="nuvem")iaCfg().u=Date.now();
-  try{localStorage.setItem(nsk("pulpito.ia"),JSON.stringify(IA.cfg));}catch(e){}
-  if(modo!=="nuvem")iaPush(modo==="tira");
+function iaCfg(){
+  if(!IA.cfg){
+    try{IA.cfg=JSON.parse(localStorage.getItem(nsk("pulpito.ia"))||"{}")||{};}catch(e){IA.cfg={};}
+    /* chave guardada por versões anteriores: continua valendo neste aparelho, mas deixa de ir para a nuvem sem você escolher */
+    if(IA.cfg.k&&IA.cfg.persist===undefined){IA.cfg.persist=true;IA.cfg.sync=false;}
+  }
+  return IA.cfg;
 }
-async function iaPush(vazio){
-  const c=iaCfg();if(!SY.user||!SY.fs||(!c.k&&!vazio))return;
-  try{await SY.fs.collection("users").doc(SY.user.uid).collection("config").doc("ia").set({u:c.u||Date.now(),p:c.p||"",k:c.k||"",m:c.m||""});}catch(e){}
+/* A chave só é gravada no aparelho se você marcar "lembrar", e só vai para a nuvem se marcar "sincronizar". Nunca entra em cópias de segurança, logs ou mensagens de erro. */
+function iaSave(modo){
+  const c=iaCfg();
+  if(modo!=="nuvem")c.u=Date.now();
+  try{
+    const g=Object.assign({},c);if(!c.persist)delete g.k;
+    if(modo==="tira"||(!g.k&&!g.p&&!g.m))localStorage.removeItem(nsk("pulpito.ia"));else localStorage.setItem(nsk("pulpito.ia"),JSON.stringify(g));
+  }catch(e){}
+  if(modo==="tira")iaPush(true);else if(modo!=="nuvem"&&c.sync&&c.persist)iaPush();
+}
+async function iaPush(remover){
+  const c=iaCfg();if(!SY.user||!SY.fs)return;
+  const ref=SY.fs.collection("users").doc(SY.user.uid).collection("config").doc("ia");
+  try{
+    if(remover)await ref.delete();
+    else if(c.k&&c.sync&&c.persist)await ref.set({v:2,u:c.u||Date.now(),p:c.p||"",k:c.k||"",m:c.m||""});
+  }catch(e){}
 }
 function iaAplica(d){
   const c=iaCfg();
+  if(!c.sync)return;                                   /* sem sincronização ligada neste aparelho, a cópia da nuvem é ignorada */
   if(!d){if(c.k)iaPush();return;}
-  const lu=c.u||0,ru=d.u||0;
-  if(ru>lu){
-    c.p=d.p||"";c.k=d.k||"";c.m=d.m||"";c.u=ru;iaSave("nuvem");
+  const lu=c.u||0,ru=+d.u||0;
+  if(ru>lu&&typeof d.k==="string"&&d.k.length<=400&&typeof d.p==="string"&&IAP[d.p]){
+    c.p=d.p;c.k=d.k;c.m=typeof d.m==="string"?d.m.slice(0,80):"";c.u=ru;c.persist=true;iaSave("nuvem");
     if(V.tela==="ia"&&!IA.msgs.length&&!(document.activeElement&&/^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName)))renderIA();
     if(V.tela==="lista"&&V.tab==="mais"&&!$("modal").classList.contains("show"))renderMais();
-  }else if(ru<lu)iaPush(true);
+  }else if(ru<lu)iaPush();
 }
 async function iaChamar(msgs,sys){
   const c=iaCfg(),p=IAP[c.p]?c.p:"claude",m=c.m||IAP[p].m,k=c.k;let r,j={};
@@ -1838,10 +1944,13 @@ function renderIA(){
     $("app").innerHTML=h+nav();return;
   }
   if(!c.k||IA.setup){
-    h+=`<p class="sd2">Use a sua própria IA. A chave fica na sua conta e aparece sozinha nos seus outros aparelhos, mas não entra na cópia de segurança.</p>
+    h+=`<p class="sd2">Use a sua própria IA. Por padrão a chave fica só na memória desta sessão e some ao fechar o app. Ela nunca entra na cópia de segurança.</p>
     <div class="card"><h3>Qual IA você usa?</h3><div class="seg eq">${Object.keys(IAP).map(k=>`<button class="${pv===k?"on":""}" data-a="iaprov" data-v="${k}">${IAP[k].n}</button>`).join("")}</div>
     <label class="f">Chave de acesso (API key)</label><input class="in" id="ia-k" type="password" autocomplete="off" placeholder="Cole a chave aqui" value="${esc(c.k||"")}">
     <details class="guia"><summary>Como conseguir a chave do ${IAP[pv].n}</summary><ol>${IAP[pv].s.map(x=>`<li>${x}</li>`).join("")}</ol><p class="meta">${IAP[pv].g} A chave é sua: não envie para ninguém.</p><a class="btn" href="${IAP[pv].u}" target="_blank" rel="noopener" style="display:flex;justify-content:center;margin-top:8px">Abrir ${IAP[pv].l.split(" ")[0]}</a></details>
+    <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px"><input type="checkbox" id="ia-pers" ${c.persist?"checked":""}><span>Lembrar a chave neste aparelho</span></label>
+    ${SY.user?`<label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:14px"><input type="checkbox" id="ia-sync" ${c.sync?"checked":""}><span>Sincronizar a chave com a minha conta Google (vai para o Firestore, para os outros aparelhos)</span></label>`:""}
+    <p class="meta" style="margin-top:8px">Aviso: chave guardada no navegador pode ser lida por qualquer código que rode neste site. Use uma chave com limite de gasto e apague no site da IA se suspeitar. Remover aqui não cancela a chave no provedor.</p>
     <label class="f">Modelo (opcional)</label><input class="in" id="ia-m" placeholder="${IAP[pv].m}" value="${esc(c.m||"")}">
     <button class="btn" style="width:100%;margin-top:8px" data-a="iamodelos">Ver modelos disponíveis</button>
     <div class="bar" style="margin-top:14px"><button class="btn gold" data-a="iasalva">Salvar e começar</button>${c.k?"":`<button class="btn" data-a="iaconf">Voltar</button>`}${c.k?`<button class="btn danger" data-a="iatira">Remover chave</button>`:""}</div></div>`;
@@ -2222,14 +2331,14 @@ function abrirAddBib(){
   const cs=db.cfg.custom||[];
   const nv=c=>{const d=BIBS[c.k];return d?d.reduce((a,l)=>a+l.reduce((x,ch)=>x+ch.length,0),0):0;};
   const dup=new Set();const vis={};cs.forEach(c=>{const n=c.n.toLowerCase();vis[n]=(vis[n]||0)+1;});Object.keys(vis).forEach(n=>{if(vis[n]>1)dup.add(n);});
-  const ruins=cs.filter(c=>!BIBS[c.k]||dup.has(c.n.toLowerCase())).length;
+  const ruins=bibPlano().length;
   $("mb").innerHTML=`<h3>Minhas Bíblias</h3>
   <p class="meta">Use o seu arquivo da NVI, ARA, NAA ou outra tradução. Ela fica guardada neste aparelho e também na sua conta, para aparecer nos outros aparelhos.</p>
   <p class="meta" style="margin-top:8px">Formato aceito: arquivo <b>.json</b> com os 66 livros, cada um com a lista de capítulos e versículos (o formato comum "bible json", com <b>chapters</b>). Importar com um nome que já existe substitui a anterior.</p>
   <label class="f" for="bibn">Nome da versão</label><input class="in" id="bibn" placeholder="Ex.: NVI" maxlength="8" value="NVI">
   <label class="drop" for="bibf" style="margin:14px 0 6px"><span class="ic">${ico("up",22)}</span><b>Escolher arquivo .json</b></label>
   <input type="file" id="bibf" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
-  ${cs.length?`<div class="sech" style="margin:18px 2px 8px"><h3 style="font-size:15px">Suas versões</h3></div><div class="rows">${cs.map(c=>{const n=nv(c),ok=!!BIBS[c.k],d=dup.has(c.n.toLowerCase());return `<div class="rw st"><span class="rt2"><b>${esc(c.n)}</b><small style="color:${ok?"var(--muted)":"var(--red)"}">${ok?n.toLocaleString("pt-BR")+" versículos"+(d?" · repetida":""):"Sem texto neste aparelho. Não funciona."}</small></span><button class="btn danger" style="min-width:0;height:38px;padding:0 14px" data-a="rmbib" data-v="${c.k}">Excluir</button></div>`;}).join("")}</div>${ruins?`<button class="btn" style="width:100%;margin-top:10px" data-a="biblimpa">Limpar as quebradas e repetidas</button>`:""}`:""}
+  ${cs.length?`<div class="sech" style="margin:18px 2px 8px"><h3 style="font-size:15px">Suas versões</h3></div><div class="rows">${cs.map(c=>{const n=nv(c),ok=!!BIBS[c.k],d=dup.has(c.n.toLowerCase());return `<div class="rw st"><span class="rt2"><b>${esc(c.n)}</b><small style="color:${ok?"var(--muted)":"var(--red)"}">${ok?n.toLocaleString("pt-BR")+" versículos"+(d?" · repetida":""):"Sem texto neste aparelho. Não funciona."}</small></span><button class="btn danger" style="min-width:0;height:38px;padding:0 14px" data-a="rmbib" data-v="${c.k}">Excluir</button></div>`;}).join("")}</div>${ruins?`<button class="btn" style="width:100%;margin-top:10px" data-a="biblimpa">Unir cópias idênticas (${ruins})</button>`:""}`:""}
   <div class="bar" style="margin-top:14px"><button class="btn" data-a="fechar">Fechar</button></div>`;
   $("modal").classList.add("show");
 }
@@ -2253,6 +2362,7 @@ async function carregaPropriasBiblias(){
   const cs=(db.cfg.custom||[]);let alguma=false;
   for(const c of cs){try{const d=await idbGet(c.k);if(d){BIBS[c.k]=d;BMISS.delete(c.k);alguma=true;}else BMISS.add(c.k);}catch(e){BMISS.add(c.k);}}
   if(db.cfg.versao&&db.cfg.versao!=="acf"&&!VERS[db.cfg.versao]&&!BIBS[db.cfg.versao]){db.cfg.versao="acf";salvar();alguma=true;}
+  if(bibNomes())alguma=true;
   if(alguma||BMISS.size)render();
 }
 /* ---------- Novo sermão ---------- */
@@ -2329,25 +2439,49 @@ function abrirRestaurar(){
   $("modal").classList.add("show");
 }
 function lerRestauro(txt){
+  RESTAURO=null;const info=$("rest-info");
   try{
-    const d=JSON.parse(txt);if(!d||!Array.isArray(d.sermoes))throw 0;
-    RESTAURO=d;
-    $("rest-info").innerHTML=`<div class="card" style="margin:0 0 8px"><b>${d.sermoes.length} sermão(ões)</b> e ${(d.eventos||[]).length} evento(s) encontrados.</div>
+    if(typeof txt!=="string"||!txt.length)throw new VErro("O arquivo está vazio");
+    if(txt.length>LIM.arq)throw new VErro("O arquivo é grande demais (máximo 20 MB)");
+    let d;try{d=JSON.parse(txt);}catch(e){throw new VErro("O arquivo não é um JSON válido");}
+    const r=validaBackup(d);RESTAURO=r;
+    const nb=(d.cfg&&Array.isArray(d.cfg.custom)?d.cfg.custom.length:0);
+    info.innerHTML=`<div class="card" style="margin:0 0 8px"><b>${r.sermoes.length} sermão(ões)</b>, ${r.eventos.length} evento(s), ${r.ilus.length} ilustração(ões), ${r.pastas.length} pasta(s).
+      <div class="meta" style="margin-top:6px">A cópia inclui sermões, agenda, ilustrações, pastas e ajustes. <b>Não inclui</b> a chave de IA, a conta Google, nem o texto das Bíblias próprias${nb?" (as "+nb+" Bíblia(s) própria(s) citadas precisam ser adicionadas de novo)":""}.</div></div>
     <div class="bar" style="margin-top:0"><button class="btn gold" data-a="rest-add">Adicionar aos atuais</button><button class="btn danger" data-a="rest-sub">Substituir tudo</button></div>`;
-  }catch(e){toast("Arquivo inválido. Use uma cópia gerada pelo Púlpito.",2800);}
+  }catch(e){info.innerHTML="";toast(e instanceof VErro?"Cópia recusada: "+e.message+". Nada foi alterado.":"Arquivo inválido. Nada foi alterado.",4200);}
 }
 async function aplicarRestauro(sub){
-  const d=RESTAURO;if(!d)return;
-  if(sub)await snapSalva("antes");
-  if(sub){db=d;}
-  else{
-    const ids=new Set(db.sermoes.map(s=>s.id));
-    d.sermoes.forEach(s=>{if(ids.has(s.id))s.id=uid();db.sermoes.push(s);});
-    const ev=new Set(db.eventos.map(e=>e.id));(d.eventos||[]).forEach(e=>{if(!ev.has(e.id))db.eventos.push(e);});
-    (d.pastas||[]).forEach(p=>{if(!db.pastas.includes(p))db.pastas.push(p);});
-    const il=new Set((db.ilus||[]).map(x=>x.id));(d.ilus||[]).forEach(x=>{if(!il.has(x.id))db.ilus.push(x);});
+  const r=RESTAURO;if(!r)return;
+  /* 1) Em substituição, a cópia do estado atual precisa estar CONFIRMADA antes de qualquer mudança */
+  if(sub&&(db.sermoes.length||db.eventos.length)){
+    let ok=await snapSalva("antes");
+    if(!ok){
+      $("rest-info").innerHTML=`<div class="card" style="border-color:var(--red,#e5604d)"><b>Não consegui guardar uma cópia dos seus dados atuais.</b><div class="meta" style="margin:6px 0">Por segurança, não vou substituir nada. Baixe uma cópia agora e tente de novo.</div></div><div class="bar" style="margin-top:0"><button class="btn gold" data-a="svbaixar">Baixar cópia atual</button><button class="btn" data-a="rest-sub">Tentar de novo</button></div>`;
+      toast("Substituição bloqueada: a cópia de segurança falhou.",4200);return;
+    }
   }
-  ajustar();aplicaTema();salvar();fechar();V.tela="lista";V.tab="msgs";render();toast("Cópia restaurada",2400);
+  /* 2) Monta o novo estado numa cópia; só depois troca de uma vez */
+  const novo=JSON.parse(JSON.stringify(db)),ids0=new Set([...db.sermoes,...db.eventos,...(db.ilus||[])].map(x=>x.id));
+  if(sub){
+    ["sermoes","eventos","ilus","pastas","lixeira"].forEach(k=>{novo[k]=JSON.parse(JSON.stringify(r[k]));});
+    const keep=novo.cfg||{};novo.cfg=Object.assign({},r.cfg,{custom:keep.custom||[],nome:keep.nome||r.cfg.nome,nomeAsk:keep.nomeAsk,foto:keep.foto||r.cfg.foto,ultBackup:keep.ultBackup||0});
+    novo.semeado=true;
+  }else{
+    const ids=new Set([...novo.sermoes.map(x=>x.id),...(novo.lixeira||[]).map(x=>x.id)]),map=new Map();
+    r.sermoes.forEach(x=>{const c=JSON.parse(JSON.stringify(x));if(ids.has(c.id)){const n=uid();map.set(c.id,n);c.id=n;}ids.add(c.id);novo.sermoes.push(c);});
+    const ev=new Set(novo.eventos.map(e=>e.id));
+    r.eventos.forEach(x=>{const c=Object.assign({},x);if(ev.has(c.id))c.id=uid();ev.add(c.id);if(map.has(c.msgId))c.msgId=map.get(c.msgId);novo.eventos.push(c);});
+    r.pastas.forEach(p=>{if(!novo.pastas.includes(p))novo.pastas.push(p);});
+    const il=new Set((novo.ilus||[]).map(x=>x.id));novo.ilus=novo.ilus||[];r.ilus.forEach(x=>{const c=Object.assign({},x);if(il.has(c.id))c.id=uid();il.add(c.id);novo.ilus.push(c);});
+  }
+  /* sermões restaurados começam sem controle de sincronização (não herdam metadados de outra conta) */
+  [...novo.sermoes,...novo.eventos,...(novo.ilus||[])].forEach(o=>{if(sub||!ids0.has(o.id))delete o.u;});
+  const antigo=db;db=novo;ajustar();
+  if(!gravaLocal()){db=antigo;SV.erro="";pintaSalvo();toast("Não consegui gravar a cópia restaurada. Nada foi alterado.",4500);return;}
+  restauroSemTombo(antigo);
+  aplicaTema();fechar();V.tela="lista";V.tab="msgs";render();toast("Cópia restaurada",2600);
+  try{syncTouch();}catch(e){}
 }
 /* ---------- Eventos ---------- */
 document.addEventListener("pointerdown",e=>{if(e.target.closest('[data-a="fmt"]'))e.preventDefault();});
@@ -2366,9 +2500,9 @@ document.addEventListener("click",e=>{
   else if(a==="iamodelos"){iaAbrirModelos();}
   else if(a==="iamsel"){const e=$("ia-m");if(e)e.value=v;fechar();toast("Modelo escolhido. Toque em Salvar.",2200);}
   else if(a==="iaconf"){IA.setup=!IA.setup;renderIA();}
-  else if(a==="iaprov"){iaCfg().p=v;iaCfg().k=($("ia-k")||{}).value||iaCfg().k||"";IA.cfg.m="";renderIA();}
-  else if(a==="iasalva"){const k=($("ia-k").value||"").trim();if(!k){toast("Cole a chave de acesso");return;}iaCfg().k=k;IA.cfg.m=($("ia-m").value||"").trim();if(!IAP[IA.cfg.p])IA.cfg.p="claude";iaSave();IA.setup=false;toast("Assistente pronto");renderIA();}
-  else if(a==="iatira"){if(confirm("Remover a chave de todos os seus aparelhos?")){IA.cfg={};iaSave("tira");IA.setup=false;IA.msgs=[];renderIA();}}
+  else if(a==="iaprov"){iaCfg().p=v;iaCfg().k=($("ia-k")||{}).value||iaCfg().k||"";if($("ia-pers"))IA.cfg.persist=$("ia-pers").checked;if($("ia-sync"))IA.cfg.sync=$("ia-sync").checked;IA.cfg.m="";renderIA();}
+  else if(a==="iasalva"){const k=($("ia-k").value||"").trim();if(!k){toast("Cole a chave de acesso");return;}iaCfg().k=k;IA.cfg.persist=!!($("ia-pers")||{}).checked;IA.cfg.sync=IA.cfg.persist&&!!($("ia-sync")||{}).checked;IA.cfg.m=($("ia-m").value||"").trim();if(!IAP[IA.cfg.p])IA.cfg.p="claude";iaSave();IA.setup=false;toast("Assistente pronto");renderIA();}
+  else if(a==="iatira"){if(confirm("Remover a chave deste aparelho e da nuvem? Isso não cancela a chave no site da IA; para isso, apague-a lá.")){IA.cfg={};iaSave("tira");IA.setup=false;IA.msgs=[];renderIA();}}
   else if(a==="iaq"){iaEnviar(v);}
   else if(a==="iaapp"){iaParaApp(v);}
   else if(a==="iaapp2"){const t=($("ia-t2").value||"").trim();if(!t){toast("Escreva o pedido primeiro");return;}iaParaApp(t);}
@@ -2412,8 +2546,21 @@ document.addEventListener("click",e=>{
   else if(a==="th"){const cur0=$("ev-h").value,m=cur0?+cur0.split(":")[1]:0;horaSet(+v,m);}
   else if(a==="tm"){const cur0=$("ev-h").value,h=cur0?+cur0.split(":")[0]:19;horaSet(h,+v);}
   else if(a==="tlimpa"){horaSet(null);$("tp").innerHTML="";}
-  else if(a==="updgo"){window.__atualizando=1;try{salvarJa();}catch(e){}b.textContent="Atualizando…";b.disabled=true;const fim=()=>location.reload();
-    (async()=>{try{const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));const ks=await caches.keys();await Promise.all(ks.filter(k=>!/assets/.test(k)).map(k=>caches.delete(k)));}catch(e){}fim();})();setTimeout(fim,3000);}
+  else if(a==="updgo"){
+    /* 1) não perde edição: só segue se o salvamento deste aparelho foi confirmado; 2) só troca de versão se a nova já foi baixada */
+    if(!salvarJa()){toast("Não consegui salvar suas edições. Não atualizei; baixe uma cópia em Mais antes.",5000);return;}
+    if(!navigator.onLine){toast("Sem internet. O app atual continua funcionando; atualize quando estiver conectado.",4200);return;}
+    window.__atualizando=1;b.textContent="Atualizando…";b.disabled=true;
+    (async()=>{
+      try{
+        const [r1,r2]=await Promise.all([fetch("index.html",{cache:"reload"}),fetch("sw.js?_="+Date.now(),{cache:"no-store"})]);
+        if(!r1.ok||!r2.ok)throw 0;
+        const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));
+        const ks=await caches.keys();await Promise.all(ks.filter(k=>/^pulpito-v\d+$/.test(k)).map(k=>caches.delete(k)));
+      }catch(e){window.__atualizando=0;b.textContent="Atualizar";b.disabled=false;toast("Não consegui baixar a atualização. Você continua na versão atual.",4200);return;}
+      location.reload();
+    })();
+  }
   else if(a==="updx"){const u=$("upd");if(u)u.remove();}
   else if(a==="chkupd"){const r=window.__reg;if(!r){toast("Atualização indisponível neste modo");return;}toast("Procurando…");r.update().then(()=>{setTimeout(()=>{if(r.waiting){mostraAtualiza(r.waiting);fechar();}else toast("Você já está na versão mais recente ("+VER+")",2400);},900);}).catch(()=>toast("Sem internet para verificar"));}
   else if(a==="ideia"){const e=$("idq"),t=e&&e.value.trim();if(!t){toast("Escreva a ideia primeiro");return;}db.sermoes.push({id:uid(),titulo:t,assunto:"",pasta:"",min:30,at:Date.now(),status:"ideia",base:"",fav:false,aberto:0,hist:[],topicos:[]});ajustar();salvar();toast("Ideia guardada em Mensagens");render();}
@@ -2456,15 +2603,9 @@ document.addEventListener("click",e=>{
   else if(a==="nomeok"){db.cfg.nome=$("nm").value.trim();salvar();fechar();render();}
   else if(a==="fotoremove"){db.cfg.foto="";salvar();fotoPrev();render();}
   else if(a==="addbib")abrirAddBib();
-  else if(a==="biblimpa"){
-    const cs=db.cfg.custom||[],manter=new Map();
-    cs.slice().reverse().forEach(c=>{const n=c.n.toLowerCase();if(BIBS[c.k]&&!manter.has(n))manter.set(n,c.k);});
-    const sai=cs.filter(c=>manter.get(c.n.toLowerCase())!==c.k);
-    sai.forEach(c=>{delete BIBS[c.k];BMISS.delete(c.k);idbDel(c.k);bibApaga(c.k);});
-    db.cfg.custom=cs.filter(c=>!sai.includes(c));
-    if(db.cfg.versao&&db.cfg.versao!=="acf"&&!VERS[db.cfg.versao]&&!BIBS[db.cfg.versao])db.cfg.versao="acf";
-    salvar();BN=null;abrirAddBib();toast(sai.length+" removida"+(sai.length===1?"":"s"));}
-  else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];BMISS.delete(k);idbDel(k);bibApaga(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
+  else if(a==="biblimpa"){const p=bibPlano();if(p.length&&confirm("Há "+p.length+" cópia(s) com o mesmo nome e exatamente o mesmo texto. Vou manter uma e remover as repetidas deste aparelho e da sua conta. Versões com o mesmo nome mas texto diferente NÃO são mexidas. Continuar?")){const n=bibUne();abrirAddBib();toast(n+" cópia"+(n===1?"":"s")+" unida"+(n===1?"":"s"));}}
+  
+else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];BMISS.delete(k);idbDel(k);bibApaga(k);if(db.cfg.versao===k)db.cfg.versao="acf";salvar();BN=null;abrirAddBib();toast("Removida");}
   else if(a==="det"){V.det=!V.det;rerender();}
   else if(a==="voltar"||a==="ok"){if(a==="ok")toast("Salvo");salvar();V.tela="lista";V.apagar=null;render();}
   else if(a==="tempo"){const s=cur();s.min=+v;s.at=Date.now();salvar();rerender();}
@@ -2561,6 +2702,9 @@ document.addEventListener("click",e=>{
   else if(a==="lixvazia"){if(confirm("Apagar de vez todos os sermões da lixeira?")){db.lixeira=[];salvar();refazSheet();}}
   else if(a==="login")entrarGoogle();
   else if(a==="logout")sairConta();
+  else if(a==="migvinc")migraVincula();
+  else if(a==="mignao"){const u=SY.migU;if(u){try{localStorage.setItem("pulpito.mig."+u.uid,"no");}catch(e){}irParaEspaco(u.uid);}}
+  else if(a==="migdep"){SY.pausa=false;SY.migU=null;fechar();try{SY.auth.signOut();}catch(e){}}
   else if(a==="syncnow"){syncTouch();syncPush();bibSync();toast("Sincronizando…");}
   else if(a==="nada"){}
   else if(a==="tema"){db.cfg.tema=v;salvar();aplicaTema();refazSheet();}
@@ -2671,13 +2815,19 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="54";
+const VER="55";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
 const hsh=o=>{const r=Object.assign({},o);delete r.u;const t=JSON.stringify(r);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
 const cfgSync=()=>{const c=db.cfg;return {pastas:db.pastas,nome:c.nome,tema:c.tema,versao:c.versao,fonte:c.fonte,bf:c.bf,som:c.som,modo:c.modo,agr:c.agr,fy:c.fy||0,fo:c.fo||0,fr:c.fr||0,foto:c.foto||"",dest:c.dest||{}};};
 function paraLixeira(o){db.lixeira=(db.lixeira||[]).filter(x=>x.id!==o.id);db.lixeira.unshift(Object.assign(JSON.parse(JSON.stringify(o)),{delAt:Date.now()}));db.lixeira=db.lixeira.slice(0,40);}
+/* Restauração por substituição: itens que sumiram NÃO viram exclusões na nuvem (reaparecem do que está na nuvem). */
+function restauroSemTombo(antigo){
+  const m=syncMeta(),vivos=new Set([...db.sermoes,...db.eventos,...(db.ilus||[])].map(x=>x.id));
+  Object.keys(m.h).forEach(id=>{if(id!=="_cfg"&&!vivos.has(id)){delete m.h[id];delete m.p[id];}});
+  syncSave();
+}
 function syncTouch(){
   const m=syncMeta(),now=Date.now(),vistos=new Set();
   const itens=[...db.sermoes.filter(x=>!x.ex).map(x=>["s",x]),...db.eventos.map(x=>["e",x]),...(db.ilus||[]).map(x=>["i",x])];
@@ -2699,32 +2849,57 @@ function syncApply(){
   SY.rq.forEach(r=>{
     const id=r.id;
     if(id==="_cfg"){
-      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);db.pastas=c.pastas||[];["nome","tema","versao","fonte","bf","som","modo","agr","fy","fo","fr","foto","dest"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=c[k];});m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
+      if(r.u>(m.cu||0)){try{const c=JSON.parse(r.d);if(!c||typeof c!=="object")throw 0;db.pastas=(Array.isArray(c.pastas)?c.pastas:[]).filter(p=>typeof p==="string"&&p.length&&p.length<=LIM.curto).slice(0,LIM.pas);{const vc=vCfg(c);["nome","tema","versao","fonte","bf","som","modo","agr","fy","fo","fr","foto","dest"].forEach(k=>{if(c[k]!==undefined)db.cfg[k]=vc[k];});}m.cu=r.u;cfgMud=true;mud=true;}catch(e){}}
       m.p._cfg=Math.max(m.p._cfg===undefined?-1:m.p._cfg,r.u);return;
     }
     const loc=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||(db.ilus||[]).find(x=>x.id===id);
+    m.rv=m.rv||{};m.sent=m.sent||{};
+    const rr=(r.v===2&&Number.isInteger(r.rev))?r.rev:null;      /* null = documento escrito por versão antiga */
+    if(rr!==null&&m.rv[id]!==undefined&&m.rv[id]>=rr)return;       /* já conhecido (eco do que eu mesmo enviei) */
+    if(!idOk(id)){SY.rejeit=(SY.rejeit||0)+1;return;}
+    const sujo=loc?isSujo(m,loc):false;
     if(r.del){
-      if(loc&&r.u>=loc.u){
+      if(loc&&sujo){m.rv[id]=rr===null?0:rr;delete m.sent[id];return;}   /* editei localmente: minha edição vence a exclusão remota */
+      if(loc){
+        if(r.u<loc.u&&rr===null){return;}
         if(syncEmUso(id)){rest.push(r);return;}
         if(db.sermoes.includes(loc)&&!loc.ex)paraLixeira(loc);
         db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);db.ilus=(db.ilus||[]).filter(x=>x.id!==id);delete m.h[id];mud=true;
       }
-      m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);return;
+      m.rv[id]=rr===null?0:rr;m.sent[id]="del";m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);return;
     }
-    if(!loc||r.u>loc.u){
-      if(m.tomb[id]&&m.tomb[id]>r.u){return;}
-      if(loc&&syncEmUso(id)){rest.push(r);return;}
-      let o;try{o=JSON.parse(r.d);}catch(e){return;}
-      o.u=r.u;
-      db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);db.ilus=(db.ilus||[]).filter(x=>x.id!==id);
-      (r.k==="e"?db.eventos:r.k==="i"?db.ilus:db.sermoes).push(o);delete m.tomb[id];aplicados.push(id);mud=true;
-      m.p[id]=r.u;
-    }else m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);
+    /* documento ainda apagado por mim localmente: a exclusão local só vence se ela é mais nova que a edição remota */
+    if(!loc&&m.tomb[id]&&m.tomb[id]>=r.u&&rr===null){return;}
+    if(!loc&&m.tomb[id]&&rr!==null&&m.sent[id]!=="del"){/* excluí aqui e outro aparelho editou: a edição remota volta (edição vence exclusão) */delete m.tomb[id];}
+    let o;try{
+      if(typeof r.d!=="string"||r.d.length>LIM.arq/4)throw new VErro("grande");
+      const raw=JSON.parse(r.d),us=new Set();
+      o=r.k==="e"?vEvento(raw,us,null):r.k==="i"?vIlus(raw,us):vSermao(raw,us,null);
+      o.id=id;if(r.k==="s"&&raw&&raw.ex)o.ex=1;
+    }catch(e){SY.rejeit=(SY.rejeit||0)+1;m.p[id]=Math.max(m.p[id]===undefined?-1:m.p[id],r.u);return;}
+    o.u=r.u;
+    if(loc){
+      if(hsh(o)===hsh(loc)){m.rv[id]=rr===null?0:rr;m.sent[id]=hsh(loc);m.h[id]=hsh(loc);m.p[id]=r.u;loc.u=r.u;return;}   /* mesmo conteúdo: só adota a revisão */
+      if(sujo){
+        if(rr===null&&r.u<=loc.u){m.rv[id]=0;delete m.sent[id];return;}   /* versão antiga sem revisão: vale o mais recente (limite conhecido) */
+        if(syncEmUso(id)){rest.push(r);return;}
+        const c=JSON.parse(JSON.stringify(loc));c.id=uid();c.u=Date.now();
+        const sfx=" (conflito "+new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+")";
+        if(r.k==="e"||r.k==="s"){c.titulo=(c.titulo||"Sem título")+sfx;}else c.tit=(c.tit||"Sem título")+sfx;
+        if(r.k==="s"){c.status=c.status==="pregado"?"pregado":"rascunho";delete c.ex;}
+        (r.k==="e"?db.eventos:r.k==="i"?db.ilus:db.sermoes).push(c);
+        SY.conflitos=(SY.conflitos||0)+1;SY.conflitoMsg="Duas versões de \""+(o.titulo||o.tit||"um item")+"\" foram editadas ao mesmo tempo. Guardei as duas: a sua ficou como cópia \"(conflito)\".";
+        setTimeout(()=>toast(SY.conflitoMsg,7000),300);
+      }else if(syncEmUso(id)){rest.push(r);return;}
+    }
+    db.sermoes=db.sermoes.filter(x=>x.id!==id);db.eventos=db.eventos.filter(x=>x.id!==id);db.ilus=(db.ilus||[]).filter(x=>x.id!==id);
+    (r.k==="e"?db.eventos:r.k==="i"?db.ilus:db.sermoes).push(o);delete m.tomb[id];aplicados.push(id);mud=true;
+    m.rv[id]=rr===null?0:rr;m.p[id]=r.u;
   });
   SY.rq=rest;
   if(mud){
     ajustar();
-    aplicados.forEach(id=>{const o=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||db.ilus.find(x=>x.id===id);if(o)m.h[id]=hsh(o);});
+    aplicados.forEach(id=>{const o=db.sermoes.find(x=>x.id===id)||db.eventos.find(x=>x.id===id)||db.ilus.find(x=>x.id===id);if(o){m.h[id]=hsh(o);m.sent[id]=m.h[id];}});
     if(cfgMud){m.h._cfg=hsh({d:cfgSync()});aplicaTema();}
     gravaLocal();
     if(!P&&V.tela==="lista"&&!$("modal").classList.contains("show"))render();
@@ -2732,28 +2907,67 @@ function syncApply(){
   syncSave();
   if(rest.length)setTimeout(syncApply,4000);
 }
+/* "sujo" = tem alteração local que a nuvem ainda não confirmou */
+function isSujo(m,o){
+  m.sent=m.sent||{};const s=m.sent[o.id];
+  if(s!==undefined)return s!==hsh(o);
+  return (m.p[o.id]===undefined?-1:m.p[o.id])<o.u;
+}
+function classificaErro(e){
+  const c=(e&&e.code)||"";
+  if(c.includes("permission"))return "perm";
+  if(c.includes("unavailable")||c.includes("network")||c.includes("deadline")||c.includes("offline"))return "rede";
+  if(c.includes("aborted")||c.includes("failed-precondition"))return "conflito";
+  return "outro";
+}
 async function syncPush(){
-  if(!SY.user||!SY.fs||SY.envia)return;
+  if(!SY.user||!SY.fs||SY.envia||SY.pausa)return;
   if(!navigator.onLine){SY.estado="off";SY.msg="Sem internet. Envio quando voltar.";refazConta();return;}
-  const m=syncMeta(),col=SY.fs.collection("users").doc(SY.user.uid).collection("itens"),ops=[];
-  const add=(id,u,data)=>{if((m.p[id]===undefined?-1:m.p[id])>=u)return;ops.push({id,u,data});};
-  db.sermoes.forEach(o=>{if(!o.ex)add(o.id,o.u,{k:"s",u:o.u,d:JSON.stringify(o)});});
-  db.eventos.forEach(o=>add(o.id,o.u,{k:"e",u:o.u,d:JSON.stringify(o)}));
-  (db.ilus||[]).forEach(o=>add(o.id,o.u,{k:"i",u:o.u,d:JSON.stringify(o)}));
-  Object.keys(m.tomb).forEach(id=>add(id,m.tomb[id],{del:true,u:m.tomb[id]}));
-  add("_cfg",m.cu,{k:"c",u:m.cu,d:JSON.stringify(cfgSync())});
-  if(!ops.length){SY.estado="ok";SY.msg="";refazConta();return;}
-  SY.envia=true;SY.estado="env";refazConta();
+  const ep=SY.user.uid,m=syncMeta();m.rv=m.rv||{};m.sent=m.sent||{};
+  const col=SY.fs.collection("users").doc(ep).collection("itens"),fila=[];
+  const add=(id,k,o,h)=>{fila.push({id,k,o,h});};
+  db.sermoes.forEach(o=>{if(!o.ex&&isSujo(m,o))add(o.id,"s",o,hsh(o));});
+  db.eventos.forEach(o=>{if(isSujo(m,o))add(o.id,"e",o,hsh(o));});
+  (db.ilus||[]).forEach(o=>{if(isSujo(m,o))add(o.id,"i",o,hsh(o));});
+  Object.keys(m.tomb).forEach(id=>{if(m.sent[id]!=="del"&&(m.p[id]===undefined?-1:m.p[id])<m.tomb[id])add(id,"del",{id,u:m.tomb[id]},"del");});
+  if((m.p._cfg===undefined?-1:m.p._cfg)<m.cu)add("_cfg","c",{id:"_cfg",u:m.cu},"cfg");
+  if(!fila.length){SY.estado="ok";SY.msg="";SY.pend=false;refazConta();return;}
+  SY.envia=true;SY.estado="env";SY.pend=true;refazConta();
+  let falhou=false,conflitos=[];
   try{
-    for(let i=0;i<ops.length;i+=15){
-      const b=SY.fs.batch(),parte=ops.slice(i,i+15);
-      parte.forEach(o=>b.set(col.doc(o.id),o.data));
-      await b.commit();
-      parte.forEach(o=>{m.p[o.id]=o.u;});syncSave();
+    for(const it of fila){
+      if(!SY.user||SY.user.uid!==ep)break;                     /* conta mudou: para tudo */
+      const ref=col.doc(it.id);
+      const dados=it.k==="del"?null:(it.k==="c"?JSON.stringify(cfgSync()):JSON.stringify(it.o));
+      const res=await SY.fs.runTransaction(async tx=>{
+        const snap=await tx.get(ref),ex=snap.exists,cd=ex?snap.data():null;
+        const cr=ex?(cd.v===2&&Number.isInteger(cd.rev)?cd.rev:0):0,base=m.rv[it.id]||0;
+        if(it.k==="c"){tx.set(ref,{v:2,rev:cr+1,k:"c",u:it.o.u,d:dados});return{ok:true,rev:cr+1};}
+        if(ex&&cr!==base){
+          if(it.k==="del")return{conflito:true,cloud:Object.assign({id:it.id},cd)};          /* outro aparelho editou: cancela minha exclusão */
+          const mesmo=!cd.del&&cd.d===dados;
+          if(mesmo)return{ok:true,rev:cr,adota:true};
+          if(cd.del)return{ok:true,rev:cr+1,k:it.k,dados};            /* excluído lá, editado aqui: edição vence */
+          return{conflito:true,cloud:Object.assign({id:it.id},cd)};
+        }
+        if(it.k==="del"){if(!ex)return{ok:true,rev:base};tx.set(ref,{v:2,rev:cr+1,del:true,u:it.o.u});return{ok:true,rev:cr+1};}
+        tx.set(ref,{v:2,rev:cr+1,k:it.k,u:it.o.u,d:dados});return{ok:true,rev:cr+1};
+      }).catch(e=>({erro:e}));
+      if(res&&res.erro){const t=classificaErro(res.erro);SY.estado="erro";SY.msg=erroFb(res.erro);falhou=true;SY.tipoErro=t;break;}
+      if(res.conflito){conflitos.push(res.cloud);continue;}
+      if(res.ok){
+        if(res.rev!==undefined)m.rv[it.id]=res.rev;
+        if(it.k==="del")m.sent[it.id]="del";else if(it.k!=="c")m.sent[it.id]=it.h;
+        m.p[it.id]=it.o.u;syncSave();
+      }
     }
-    m.last=Date.now();SY.estado="ok";SY.msg="";
-  }catch(e){SY.estado="erro";SY.msg=erroFb(e);}
-  SY.envia=false;syncSave();refazConta();
+    if(!falhou){m.last=Date.now();SY.estado="ok";SY.msg="";}
+  }catch(e){SY.estado="erro";SY.msg=erroFb(e);falhou=true;}
+  SY.envia=false;SY.pend=falhou;syncSave();
+  if(conflitos.length){conflitos.forEach(c=>SY.rq.push(c));syncApply();}
+  /* edição feita durante o envio: continua sujo e sai no próximo ciclo */
+  if(!falhou&&SY.user&&SY.user.uid===ep){const m2=syncMeta();if(db.sermoes.some(o=>!o.ex&&isSujo(m2,o))||db.eventos.some(o=>isSujo(m2,o))||conflitos.length){clearTimeout(SY.pushT);SY.pushT=setTimeout(syncPush,800);}}
+  refazConta();
 }
 function erroFb(e){
   const c=(e&&e.code)||"";
@@ -2774,7 +2988,79 @@ function fbCarrega(){
     .catch(e=>{SY.ready=null;throw e;});
   return SY.ready;
 }
+/* ---------- Espaço de dados por conta ----------
+   Cada conta Google tem o seu próprio espaço neste aparelho (sermões, sincronização, chave de IA, Bíblias próprias, cópias).
+   Sem login existe o espaço "sem conta" (os dados de antes desta versão). Trocar de espaço recarrega o app: assim nenhum
+   temporizador, ouvinte ou resposta atrasada da conta anterior consegue gravar ou enviar nada na conta nova. */
+function guestResumo(){
+  let d=null;try{d=JSON.parse(localStorage.getItem(LSB)||"null");}catch(e){}
+  if(!d||typeof d!=="object")return{s:0,e:0,i:0,b:0};
+  return{s:(d.sermoes||[]).filter(x=>x&&!x.ex).length,e:(d.eventos||[]).length,i:(d.ilus||[]).length,b:((d.cfg&&d.cfg.custom)||[]).length};
+}
+const guestTemDados=()=>{const r=guestResumo();return r.s+r.e+r.i+r.b>0;};
+function irParaEspaco(uid,aviso){
+  try{
+    if(uid){const k="pulpito.sync.u."+uid;let mm={};try{mm=JSON.parse(localStorage.getItem(k)||"{}")||{};}catch(e){}mm.logado=true;localStorage.setItem(k,JSON.stringify(mm));}
+    if(uid)localStorage.setItem("pulpito.acc",uid);else localStorage.removeItem("pulpito.acc");
+    if((localStorage.getItem("pulpito.acc")||"")!==(uid||""))throw 0;
+    if(aviso)sessionStorage.setItem("pulpito.aviso",aviso);
+  }catch(e){toast("Não consegui trocar de conta neste aparelho (armazenamento indisponível).",5000);try{SY.auth&&SY.auth.signOut();}catch(x){}return;}
+  location.reload();
+}
+function trocaEspaco(u){
+  SY.user=null;
+  if(SY.unsub){SY.unsub();SY.unsub=null;}if(SY.unsubIa){SY.unsubIa();SY.unsubIa=null;}clearTimeout(SY.pushT);
+  if(!UIDOK(u.uid)){toast("Conta não reconhecida.",3000);try{SY.auth.signOut();}catch(e){}return;}
+  if(SV.dirty&&!gravaLocal()){toast("Não consegui salvar os dados deste espaço. A troca de conta foi cancelada.",5000);try{SY.auth.signOut();}catch(e){}return;}
+  let tem=false,flag=null;try{tem=localStorage.getItem(LSB+".u."+u.uid)!==null;flag=localStorage.getItem("pulpito.mig."+u.uid);}catch(e){}
+  if(NS===""&&!tem&&!flag&&guestTemDados()){SY.pausa=true;SY.estado="off";SY.migU=u;abrirMigracao(u);return;}
+  irParaEspaco(u.uid);
+}
+function abrirMigracao(u){
+  const n=guestResumo();
+  $("mb").innerHTML=`<h3>Já existem dados neste aparelho</h3>
+  <p class="meta" style="margin-bottom:10px">Este aparelho guarda <b>${n.s} sermão(ões)</b>, ${n.e} evento(s), ${n.i} ilustração(ões)${n.b?" e "+n.b+" Bíblia(s) própria(s)":""} salvos <b>sem conta</b>. Você entrou como <b>${esc(u.email||"conta Google")}</b>. O Púlpito não envia nada sozinho: escolha o que fazer.</p>
+  <div class="bar" style="flex-direction:column"><button class="btn gold" data-a="migvinc">Vincular estes dados à minha conta</button>
+  <button class="btn" data-a="mignao">Manter só neste aparelho</button>
+  <button class="btn" data-a="migdep">Decidir depois (sair da conta)</button></div>
+  <p class="meta" style="margin-top:10px"><b>Vincular:</b> faz uma cópia de segurança e passa tudo para a sua conta; depois sincroniza com seus outros aparelhos.<br><b>Manter só neste aparelho:</b> sua conta abre com os dados que já estão na nuvem; estes sermões continuam guardados aqui e voltam a aparecer quando você sair da conta.<br>Nos dois casos nada é apagado.</p>`;
+  $("modal").classList.add("show");
+}
+async function migraVincula(){
+  const u=SY.migU;if(!u)return;
+  const btn=document.querySelector('[data-a="migvinc"]');if(btn)btn.disabled=true;
+  try{
+    const raw=localStorage.getItem(LSB);if(!raw)throw new Error("Não achei os dados deste aparelho.");
+    JSON.parse(raw);
+    const ok=await snapSalva("antes de vincular");
+    if(!ok)throw new Error("Não consegui guardar a cópia de segurança.");
+    /* copia as Bíblias próprias do espaço sem conta para o espaço da conta */
+    const abre=n=>new Promise((ok2,no)=>{const r=indexedDB.open(n,1);r.onupgradeneeded=()=>r.result.createObjectStore("bib");r.onsuccess=()=>ok2(r.result);r.onerror=()=>no(r.error);});
+    const de=await abre("pulpito"),para=await abre("pulpito."+u.uid);
+    const chaves=await new Promise((o,n)=>{const q=de.transaction("bib").objectStore("bib").getAllKeys();q.onsuccess=()=>o(q.result);q.onerror=()=>n(q.error);});
+    for(const k of chaves){
+      const v=await new Promise((o,n)=>{const q=de.transaction("bib").objectStore("bib").get(k);q.onsuccess=()=>o(q.result);q.onerror=()=>n(q.error);});
+      await new Promise((o,n)=>{const t=para.transaction("bib","readwrite");t.objectStore("bib").put(v,k);t.oncomplete=()=>o();t.onerror=()=>n(t.error);});
+    }
+    de.close();para.close();
+    /* o espaço da conta só é criado depois que tudo foi copiado; repetir esta etapa é seguro */
+    const d=JSON.parse(raw);const nd=validaBackup(d);
+    nd.cfg=Object.assign({},d.cfg&&typeof d.cfg==="object"?d.cfg:{},nd.cfg);nd.semeado=true;
+    localStorage.setItem(LSB+".u."+u.uid,JSON.stringify(nd));
+    localStorage.setItem("pulpito.mig."+u.uid,"vinc");
+    irParaEspaco(u.uid,"Seus dados foram vinculados à conta. Uma cópia de segurança ficou em Mais → Cópias automáticas (no espaço sem conta).");
+  }catch(e){
+    if(btn)btn.disabled=false;
+    toast("Não vinculei nada: "+((e&&e.message)||"erro")+" Seus dados continuam intactos.",5200);
+  }
+}
 function syncUser(u){
+  if(u&&u.uid!==NS){trocaEspaco(u);return;}
+  if(!u&&NS){
+    SY.user=null;if(SY.unsub){SY.unsub();SY.unsub=null;}if(SY.unsubIa){SY.unsubIa();SY.unsubIa=null;}
+    irParaEspaco("","Você saiu da conta. Os sermões dela continuam guardados neste aparelho e voltam quando você entrar de novo.");return;
+  }
+  SY.pausa=false;
   SY.user=u;
   if(SY.unsub){SY.unsub();SY.unsub=null;}
   if(SY.unsubIa){SY.unsubIa();SY.unsubIa=null;}
@@ -2799,46 +3085,65 @@ function syncOuve(u,inicial){
   SY.unsubIa=SY.fs.collection("users").doc(u.uid).collection("config").doc("ia").onSnapshot(d=>{iaAplica(d.exists?d.data():null);},()=>{});
 }
 /* Bíblias próprias (ex.: NVI) seguem para a conta privada e aparecem nos outros aparelhos */
-/* Uma só cópia por nome (ex.: NVI): fica a de menor chave; as repetidas somem do aparelho e da conta */
-function bibDedupe(extra){
-  let mud=false;const g=new Map();
-  [...(db.cfg.custom||[]),...(extra||[])].forEach(c=>{const n=String(c.n).toLowerCase(),a=g.get(n)||new Set();a.add(c.k);g.set(n,a);});
-  g.forEach(ks=>{
-    if(ks.size<2)return;
-    const keep=[...ks].sort()[0];
-    ks.forEach(k=>{
-      if(k===keep)return;
-      db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];BMISS.delete(k);try{idbDel(k);}catch(e){}
-      bibApaga(k);if(db.cfg.versao===k)db.cfg.versao=keep;mud=true;
-    });
+/* Bíblias próprias: a identidade é o CONTEÚDO, nunca só o nome. Nada é apagado automaticamente.
+   - mesmo nome e mesmo conteúdo = cópias idênticas (só são unidas quando você confirma em "Minhas Bíblias");
+   - mesmo nome e conteúdo diferente = versões diferentes: as duas ficam e a mais nova ganha um sufixo no nome. */
+const bibHash=arr=>{const t=JSON.stringify(arr);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+":"+t.length;};
+function bibPlano(){
+  const cs=db.cfg.custom||[],g=new Map(),sai=[];
+  cs.forEach(c=>{const d=BIBS[c.k];if(!d)return;const h=String(c.n).toLowerCase()+"|"+bibHash(d);if(!g.has(h))g.set(h,[]);g.get(h).push(c.k);});
+  g.forEach(ks=>{if(ks.length>1){ks.sort();ks.slice(1).forEach(k=>sai.push({k,keep:ks[0]}));}});
+  return sai;
+}
+function bibNomes(){
+  const cs=db.cfg.custom||[],vistos=new Map();let mud=false;const sai=new Set(bibPlano().map(x=>x.k));
+  cs.slice().sort((a,b)=>a.k<b.k?-1:1).forEach(c=>{
+    if(sai.has(c.k))return;
+    let n=String(c.n),i=2;const base=n.slice(0,8);
+    while(vistos.has(n.toLowerCase())&&vistos.get(n.toLowerCase())!==c.k){n=base+" ("+(i++)+")";}
+    vistos.set(n.toLowerCase(),c.k);if(n!==c.n){c.n=n;mud=true;}
   });
-  if(mud){salvar();BN=null;try{refazSheet();}catch(e){}}
+  if(mud){salvar();BN=null;}
   return mud;
 }
-setTimeout(()=>{try{bibDedupe();}catch(e){}},0);
+function bibUne(){
+  const plano=bibPlano();if(!plano.length)return 0;let n=0;
+  plano.forEach(({k,keep})=>{
+    if(!BIBS[keep])return;                                   /* só remove a cópia se a que fica está carregada e disponível */
+    db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];BMISS.delete(k);
+    if(db.cfg.versao===k)db.cfg.versao=keep;
+    try{idbDel(k);}catch(e){}bibApaga(k);n++;
+  });
+  if(n){salvar();BN=null;}
+  return n;
+}
 async function bibSync(){
-  if(!SY.user||!SY.fs||SY.bibOcup)return;SY.bibOcup=true;
+  if(!SY.user||!SY.fs||SY.bibOcup)return;SY.bibOcup=true;const ep=SY.user.uid;
   try{
-    bibDedupe();
     const m=syncMeta();m.bib=m.bib||{};
-    const col=SY.fs.collection("users").doc(SY.user.uid).collection("biblias");
+    const col=SY.fs.collection("users").doc(ep).collection("biblias");
     for(const c of (db.cfg.custom||[])){
       if(m.bib[c.k])continue;
-      const d=await idbGet(c.k);if(!d)continue;
+      const d=BIBS[c.k]||await idbGet(c.k);if(!d)continue;
       for(let i=0;i<d.length;i+=10){const b=SY.fs.batch();for(let j=i;j<Math.min(d.length,i+10);j++)b.set(col.doc(c.k+"_"+j),{k:c.k,i:j,d:JSON.stringify(d[j])});await b.commit();}
       await col.doc("idx_"+c.k).set({k:c.k,n:c.n,total:d.length});
       m.bib[c.k]=1;syncSave();
     }
+    if(!SY.user||SY.user.uid!==ep)throw 0;
     const snap=await col.get(),idx=[],partes={};
     snap.forEach(doc=>{const x=doc.data();if(doc.id.startsWith("idx_"))idx.push(x);else(partes[x.k]=partes[x.k]||[])[x.i]=x.d;});
-    bibDedupe(idx.filter(x=>(partes[x.k]||[]).filter(Boolean).length>=x.total).map(x=>({k:x.k,n:x.n})));
-    for(const x of idx.filter(x=>{const n=String(x.n).toLowerCase();return !(db.cfg.custom||[]).some(c=>c.k<x.k&&c.n.toLowerCase()===n)&&!idx.some(y=>y.k<x.k&&String(y.n).toLowerCase()===n);})){
-      const tem=(db.cfg.custom||[]).some(c=>c.k===x.k);
-      if(tem&&BIBS[x.k])continue;
+    for(const x of idx){
+      if(!x||!idOk(x.k)||typeof x.n!=="string"||x.n.length>12||!Number.isInteger(x.total))continue;
+      if((db.cfg.custom||[]).some(c=>c.k===x.k)&&BIBS[x.k])continue;
       const ps=partes[x.k]||[];if(ps.filter(Boolean).length<x.total)continue;
-      const arr=ps.map(t=>JSON.parse(t));
+      let arr;try{arr=ps.map(t=>JSON.parse(t));}catch(e){continue;}
+      if(arr.length!==66)continue;
+      const h=bibHash(arr);
+      /* já tenho esta Bíblia (mesmo nome e mesmo conteúdo) sob outra chave: não duplica, e não apaga nada na nuvem */
+      if((db.cfg.custom||[]).some(c=>BIBS[c.k]&&String(c.n).toLowerCase()===x.n.toLowerCase()&&bibHash(BIBS[c.k])===h))continue;
       await idbSet(x.k,arr);BIBS[x.k]=arr;BMISS.delete(x.k);
-      if(!tem)db.cfg.custom=(db.cfg.custom||[]).concat([{k:x.k,n:x.n}]);m.bib[x.k]=1;salvar();syncSave();
+      if(!(db.cfg.custom||[]).some(c=>c.k===x.k))db.cfg.custom=(db.cfg.custom||[]).concat([{k:x.k,n:x.n}]);
+      m.bib[x.k]=1;bibNomes();salvar();syncSave();
       toast(x.n+" veio da sua conta",2600);refazSheet();
     }
   }catch(e){}
@@ -2860,7 +3165,7 @@ async function entrarGoogle(){
 }
 async function sairConta(){
   try{const a=await fbCarrega();await a.signOut();}catch(e){}
-  const m=syncMeta();m.logado=false;syncSave();SY.estado="off";SY.msg="";refazConta();toast("Você saiu da conta");
+  const m=syncMeta();m.logado=false;syncSave();SY.estado="off";SY.msg="";refazConta();
 }
 function contaSub(){
   if(!SY.user)return "Entrar com Google";
@@ -2882,7 +3187,13 @@ document.addEventListener("visibilitychange",()=>{
 });
 window.addEventListener("pagehide",()=>{if(SY.user){clearTimeout(SY.pushT);syncPush();}});
 setTimeout(()=>{let u=0;try{u=+localStorage.getItem(nsk("pulpito.snap"))||0;}catch(e){}if(Date.now()-u>6048e5)snapSalva("auto");},5000);
-try{if(JSON.parse(localStorage.getItem("pulpito.sync")||"{}").logado&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
+try{if((JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}").logado)&&navigator.onLine)fbCarrega().catch(()=>{});}catch(e){}
+try{const av=sessionStorage.getItem("pulpito.aviso");if(av){sessionStorage.removeItem("pulpito.aviso");setTimeout(()=>toast(av,6000),900);}}catch(e){}
+/* outra aba: troca de conta ou alteração dos dados */
+window.addEventListener("storage",e=>{
+  if(e.key==="pulpito.acc"){location.reload();return;}
+  if(e.key===lsk()&&e.newValue&&!SV.dirty){if(V.tela==="edit"||P)toast("Outra aba do Púlpito alterou os dados. Feche uma delas para evitar perder edições.",6000);else location.reload();}
+});
 render();carregaPropriasBiblias();
 if(CORROMPIDO)setTimeout(()=>toast("Não consegui ler os dados deste aparelho. Guardei uma cópia deles e não apaguei nada. Restaure uma cópia em Mais.",7000),800);
 if(!db.cfg.nome&&!db.cfg.nomeAsk){db.cfg.nomeAsk=true;salvar();setTimeout(abrirNome,700);}
