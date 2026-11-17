@@ -2205,7 +2205,7 @@ async function lerBibliaPropria(f){
     if(liv.length!==66||liv.some(l=>!Array.isArray(l)||!l.length))throw 0;
     const norm2=liv.map(l=>l.map(c=>Array.isArray(c)?c.map(String):Object.values(c).map(String)));
     const nome=(($("bibn")&&$("bibn").value)||"Minha").trim().slice(0,8)||"Minha";
-    const ja=(db.cfg.custom||[]).find(c=>c.n.toLowerCase()===nome.toLowerCase()),k=ja?ja.k:"c"+uid();
+    const ja=(db.cfg.custom||[]).find(c=>c.n.toLowerCase()===nome.toLowerCase()),k=ja?ja.k:"c_"+norm(nome).replace(/[^a-z0-9]/g,"");
     await idbSet(k,norm2);BIBS[k]=norm2;BMISS.delete(k);
     if(ja){const m=syncMeta();if(m.bib)delete m.bib[k];syncSave();}
     else db.cfg.custom=(db.cfg.custom||[]).concat([{k,n:nome}]);
@@ -2633,7 +2633,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="53";
+const VER="54";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem("pulpito.sync")||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem("pulpito.sync",JSON.stringify(SM));}catch(e){}}
@@ -2761,9 +2761,27 @@ function syncOuve(u,inicial){
   SY.unsubIa=SY.fs.collection("users").doc(u.uid).collection("config").doc("ia").onSnapshot(d=>{iaAplica(d.exists?d.data():null);},()=>{});
 }
 /* Bíblias próprias (ex.: NVI) seguem para a conta privada e aparecem nos outros aparelhos */
+/* Uma só cópia por nome (ex.: NVI): fica a de menor chave; as repetidas somem do aparelho e da conta */
+function bibDedupe(extra){
+  let mud=false;const g=new Map();
+  [...(db.cfg.custom||[]),...(extra||[])].forEach(c=>{const n=String(c.n).toLowerCase(),a=g.get(n)||new Set();a.add(c.k);g.set(n,a);});
+  g.forEach(ks=>{
+    if(ks.size<2)return;
+    const keep=[...ks].sort()[0];
+    ks.forEach(k=>{
+      if(k===keep)return;
+      db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!==k);delete BIBS[k];BMISS.delete(k);try{idbDel(k);}catch(e){}
+      bibApaga(k);if(db.cfg.versao===k)db.cfg.versao=keep;mud=true;
+    });
+  });
+  if(mud){salvar();BN=null;try{refazSheet();}catch(e){}}
+  return mud;
+}
+setTimeout(()=>{try{bibDedupe();}catch(e){}},0);
 async function bibSync(){
   if(!SY.user||!SY.fs||SY.bibOcup)return;SY.bibOcup=true;
   try{
+    bibDedupe();
     const m=syncMeta();m.bib=m.bib||{};
     const col=SY.fs.collection("users").doc(SY.user.uid).collection("biblias");
     for(const c of (db.cfg.custom||[])){
@@ -2775,7 +2793,8 @@ async function bibSync(){
     }
     const snap=await col.get(),idx=[],partes={};
     snap.forEach(doc=>{const x=doc.data();if(doc.id.startsWith("idx_"))idx.push(x);else(partes[x.k]=partes[x.k]||[])[x.i]=x.d;});
-    for(const x of idx){
+    bibDedupe(idx.filter(x=>(partes[x.k]||[]).filter(Boolean).length>=x.total).map(x=>({k:x.k,n:x.n})));
+    for(const x of idx.filter(x=>{const n=String(x.n).toLowerCase();return !(db.cfg.custom||[]).some(c=>c.k<x.k&&c.n.toLowerCase()===n)&&!idx.some(y=>y.k<x.k&&String(y.n).toLowerCase()===n);})){
       const tem=(db.cfg.custom||[]).some(c=>c.k===x.k);
       if(tem&&BIBS[x.k])continue;
       const ps=partes[x.k]||[];if(ps.filter(Boolean).length<x.total)continue;
