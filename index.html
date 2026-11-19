@@ -1635,6 +1635,7 @@ async function lerPDF(buf){
   const npg=doc.numPages;
   const util=linhas.filter(l=>{
     if(/^[—–\-_=·.\s]{5,}$/.test(l.t))return false;
+    if(/^(p[úu]lpito|mensagem|nota pessoal|ideia central|gerado pelo p[úu]lpito.*)$/i.test(l.t.replace(/\s+/g," ").trim()))return false;
     if(/^\s*(p[áa]g(ina)?\.?\s*)?\d{1,4}(\s*(de|\/)\s*\d{1,4})?\s*$/i.test(l.t)&&(l.yr>.85||l.yr<.15))return false;
     if((l.yr>.9||l.yr<.1)&&npg>=3&&(reps[chave(l.t)]||0)>=Math.min(3,npg))return false;
     return true;
@@ -2466,8 +2467,10 @@ async function exportarPDF(s){
   const gs=o=>{try{doc.setGState(new doc.GState({opacity:o,"stroke-opacity":o}));}catch(e){}};
   /* a marca: quadrado arredondado com o P, igual ao ícone do app */
   function marca(x,yy,sz,cor,op){
+    const fs0=doc.getFontSize(),fn0=doc.getFont(),tc0=doc.getTextColor(),dc0=doc.getDrawColor(),lw0=doc.getLineWidth();
     gs(op==null?1:op);doc.setDrawColor(...cor);doc.setLineWidth(sz*.055);doc.roundedRect(x,yy,sz,sz,sz*.24,sz*.24,"S");
     doc.setTextColor(...cor);doc.setFont("helvetica","bold");doc.setFontSize(sz*2.35);doc.text("P",x+sz/2,yy+sz*.73,{align:"center"});gs(1);
+    doc.setFontSize(fs0);doc.setFont(fn0.fontName,fn0.fontStyle);doc.setTextColor(tc0);doc.setDrawColor(dc0);doc.setLineWidth(lw0);
   }
   const marcaD=()=>marca(W-M-34,H-72,34,OURO,.09);          /* marca d'água no canto */
   function novaPagina(){doc.addPage();marcaD();y=M+4;}
@@ -2501,23 +2504,22 @@ async function exportarPDF(s){
     }
     y+=o.gap;
   }
-  /* ---------- capa: faixa preta com título ---------- */
+  /* ---------- capa: cabeçalho editorial, claro e discreto ---------- */
   marcaD();
-  doc.setFont("helvetica","bold");doc.setFontSize(25);
-  const tl=doc.splitTextToSize(lat(s.titulo||"Sem título"),CW),lhT=25*MM*1.18;
-  const w=palS(s),est=minEst(w);
-  const meta=[s.min+" min",s.topicos.length+" tópico"+(s.topicos.length===1?"":"s"),w?w.toLocaleString("pt-BR")+" palavras":"",s.assunto].filter(Boolean).join("   ·   ");
-  const bandH=Math.max(50,12+10+tl.length*lhT+(s.base?11:0)+9+10);
-  doc.setFillColor(...PRETO);doc.rect(0,0,W,bandH,"F");
-  doc.setFillColor(...OURO);doc.rect(0,bandH,W,1.6,"F");
-  marca(M,11,9,OURO);
-  doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(...OURO);doc.text("PÚLPITO",M+12.5,16.2,{charSpace:1.4});
-  doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(170,166,155);doc.text("MENSAGEM",W-M,16.2,{align:"right",charSpace:1.4});
-  let yy=29;doc.setFont("helvetica","bold");doc.setFontSize(25);doc.setTextColor(255,255,255);
-  tl.forEach(l=>{doc.text(l,M,yy+25*MM*.85);yy+=lhT;});
-  if(s.base){doc.setFont("times","italic");doc.setFontSize(13);doc.setTextColor(...OURO);doc.text(lat("Texto base: "+s.base),M,yy+5.5);yy+=11;}
-  doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(185,181,170);doc.text(lat(meta),M,yy+3);
-  y=bandH+11;
+  marca(M,M-2,8,OURO2);
+  doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...OURO2);doc.text("PÚLPITO",M+11,M+3.6,{charSpace:1.6});
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(...CINZA);doc.text("MENSAGEM",W-M,M+3.6,{align:"right",charSpace:1.6});
+  doc.setDrawColor(...OURO);doc.setLineWidth(.7);doc.line(M,M+10,W-M,M+10);
+  y=M+22;
+  doc.setFillColor(...OURO);doc.rect(M,y-6,14,1.6,"F");
+  txt(s.titulo||"Sem título",{size:24,style:"bold",lh:1.2,gap:3,color:PRETO});
+  if(s.base)txt("Texto base: "+s.base,{size:13,font:"times",style:"italic",color:OURO2,gap:4});
+  {
+    const w=palS(s),chips=[s.min+" min",s.topicos.length+" tópico"+(s.topicos.length===1?"":"s"),w?w.toLocaleString("pt-BR")+" palavras":"",s.assunto].filter(Boolean);
+    let cx=M;doc.setFont("helvetica","normal");doc.setFontSize(8.5);
+    chips.forEach(c=>{const tw=doc.getTextWidth(lat(c))+7;if(cx+tw>W-M){cx=M;y+=8;}doc.setDrawColor(...LINHA);doc.setLineWidth(.35);doc.setFillColor(255,255,255);doc.roundedRect(cx,y,tw,6.4,3.2,3.2,"FD");doc.setTextColor(...CINZA);doc.text(lat(c),cx+3.5,y+4.4);cx+=tw+3;});
+    y+=14;
+  }
   if(s.ideia&&s.ideia.trim())caixa("IDEIA CENTRAL",s.ideia.trim(),{size:13,style:"italic",font:"times",fill:[255,243,205],bar:OURO2,gap:7});
   /* ---------- tópicos ---------- */
   s.topicos.forEach((t,i)=>{
@@ -2526,7 +2528,7 @@ async function exportarPDF(s){
     doc.setFillColor(...OURO);doc.circle(M+4.6,cy,4.6,"F");
     doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...PRETO);doc.text(String(i+1),M+4.6,cy+1.6,{align:"center"});
     doc.setFont("helvetica","bold");doc.setFontSize(15.5);doc.setTextColor(...PRETO);
-    const tt=doc.splitTextToSize(lat(t.titulo||"Tópico"),CW-48);
+    const tt=doc.splitTextToSize(lat((t.titulo||"Tópico").replace(/^\s*(\d{1,2}|[IVX]{1,5})\s*[\.\)\-–—:]\s+/,"")||"Tópico"),CW-48);
     tt.forEach((l,k)=>{doc.text(l,M+13,y+6+k*6.6);});
     const pw=palT(t);let rx=W-M;
     if(pw){doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...CINZA);doc.text("~"+minEst(pw)+" min",rx,y+5.6,{align:"right"});}
@@ -3112,7 +3114,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="60";
+const VER="61";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
