@@ -1168,7 +1168,7 @@ function renderBiblia(){
   }else{
     const cvk=V.cmp&&V.cmp!==(c.versao||"acf")&&(V.cmp==="acf"||BIBS[V.cmp])?V.cmp:null,cv=cvk?bib(cvk):null,cvn=cvk?(versList()[cvk]||{n:cvk}).n:"",vs=B[V.bk][V.ch-1]||[],k=V.bk+"."+V.ch+".",mk=c.marca&&c.marca.l===V.bk&&c.marca.c===V.ch;
     h=`<div class="top"><button class="ib" data-a="bvolta" aria-label="Voltar">←</button><h1 style="font-size:20px">${LIVROS[V.bk]} ${V.ch}</h1>
-    <button class="ib" data-a="bmenos" aria-label="Diminuir letra">A−</button><button class="ib" data-a="bmais" aria-label="Aumentar letra">A+</button>
+    <button class="ib" data-a="rbmenos" aria-label="Diminuir letra">A−</button><button class="ib" data-a="rbmais" aria-label="Aumentar letra">A+</button>
     <button class="ib ${mk?"star on":""}" style="position:static" data-a="bmarca" aria-label="Marcar capítulo">${mk?"★":"☆"}</button></div>
     <div class="rd" style="--bf:${c.bf}px">${vs.map((t,i)=>`<p class="${c.dest[k+(i+1)]?"hl hl"+(+c.dest[k+(i+1)]||1):""} ${V.alvo===i+1?"alvo":""} ${V.sel.has(i+1)?"sel":""}" data-a="vs" data-v="${i+1}"><sup>${i+1}</sup>${esc(t)}${cv?`<span class="cmp"><i>${esc(cvn)}</i> ${esc((cv[V.bk]&&cv[V.bk][V.ch-1]&&cv[V.bk][V.ch-1][i])||"—")}</span>`:""}</p>`).join("")}</div>
     <div class="bar" style="margin:10px 0 0"><button class="btn" data-a="bcmp">⇄ ${cv?"Comparando com "+esc(cvn)+" · trocar":"Comparar versão"}</button>${cv?`<button class="btn" data-a="bcmpx" aria-label="Parar de comparar">✕</button>`:""}</div>
@@ -3030,7 +3030,7 @@ else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!=
   else if(a==="bvolta"){V.sel=new Set();if(V.ch!==null)V.ch=null;else V.bk=null;renderBiblia();scrollTo(0,0);}
   else if(a==="bgo"){V.sel=new Set();V.bk=+b.dataset.l;V.ch=+b.dataset.c;V.alvo=+(b.dataset.vs||0);V.bq="";db.cfg.ult={l:V.bk,c:V.ch};salvar();renderBiblia();if(!V.alvo)scrollTo(0,0);}
   else if(a==="bprox"||a==="bant"){const B=bib();let l=V.bk,c=V.ch+(a==="bprox"?1:-1);if(c>B[l].length){l++;c=1;}else if(c<1){l--;c=l>=0?B[l].length:0;}if(l<0||l>65)return;V.sel=new Set();V.bk=l;V.ch=c;db.cfg.ult={l,c};salvar();renderBiblia();scrollTo(0,0);}
-  else if(a==="bmais"||a==="bmenos"){db.cfg.bf=Math.min(34,Math.max(14,db.cfg.bf+(a==="bmais"?2:-2)));salvar();document.querySelector(".rd").style.setProperty("--bf",db.cfg.bf+"px");}
+  else if(a==="rbmais"||a==="rbmenos"){db.cfg.bf=Math.min(34,Math.max(14,db.cfg.bf+(a==="rbmais"?2:-2)));salvar();document.querySelector(".rd").style.setProperty("--bf",db.cfg.bf+"px");}
   else if(a==="bmarca"){const m=db.cfg.marca;db.cfg.marca=m&&m.l===V.bk&&m.c===V.ch?null:{l:V.bk,c:V.ch};salvar();const y=scrollY;renderBiblia();scrollTo(0,y);}
   else if(a==="vs"){const n=+v;if(V.sel.has(n))V.sel.delete(n);else V.sel.add(n);b.classList.toggle("sel");selbar();}
   else if(a==="bfill"){const t=achaT(b),bl=t.blocos.find(x=>x.id===v),tx=textoRef(bl.ref);if(!tx){toast("Não achei essa referência. Ex.: Marcos 4:37-38");return;}bl.t=tx;salvar();rerender();toast("Texto preenchido");}
@@ -3114,7 +3114,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="61";
+const VER="62";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
