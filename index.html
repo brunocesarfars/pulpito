@@ -705,6 +705,7 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 .hpst{display:flex;gap:8px}.hpst div{flex:1;text-align:center;padding:10px 4px;border-radius:12px;background:var(--card,#ffffff0d)}.hpst b{display:block;font-family:var(--display);font-size:22px}.hpst small{color:var(--muted);font-size:12px}
 .hpr small.tts{display:block;margin-top:3px;font-size:12px}
 .trecho{display:block;margin:6px 0 2px;font-size:13px;color:var(--muted);line-height:1.4;text-align:left}.trecho small{color:var(--gold);font-weight:700;margin-right:4px}.trecho mark{background:#e0a93b55;color:inherit;border-radius:3px}
+.dock{display:flex;gap:8px;align-items:center;max-width:980px;margin:0 auto}.dock .fmtbar{flex:1;min-width:0}.vbtn{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:64px;height:56px;border-radius:16px;background:var(--gold);color:var(--gold-ink);font-size:20px;box-shadow:0 8px 28px -10px #000a}.vbtn span{font-size:11px;font-weight:700}
 </style>
 </head>
 <body>
@@ -1345,11 +1346,11 @@ function renderEdit(y){
   h+=`<button class="add" style="height:44px" data-a="regis">+ Registrar pregação</button>
   <div class="bar" style="margin-top:22px"><button class="btn" data-a="ensaiar">▶ Ensaiar (cronometrar)</button><button class="btn" data-a="pdf">Exportar PDF</button><button class="btn" data-a="doc">Exportar Word</button><button class="btn" data-a="dup">Duplicar</button><button class="btn" data-a="txt">Copiar como texto</button>
   <button class="btn danger" data-a="del">${V.apagar===s.id?"Toque de novo para excluir":"Excluir mensagem"}</button></div>
-  <div class="dock"><div class="fmtbar" role="toolbar" aria-label="Formatação">
+  <div class="dock"><button class="vbtn" data-a="ins" data-v="biblico" aria-label="Inserir versículo da Bíblia aqui">📖<span>Versículo</span></button><div class="fmtbar" role="toolbar" aria-label="Formatação">
   <button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button>
   <button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button>
   <i class="sep"></i><button data-a="flist" data-v="ul" aria-label="Lista com marcadores"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg></button><button data-a="flist" data-v="ol" aria-label="Lista numerada"><b style="font-size:13px">1.</b></button><button data-a="frec" aria-label="Recuar parágrafo (Tab)" title="Recuar parágrafo (Tab)"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M11 11h10M11 17h10M3 9l3 3-3 3"/></svg></button><button data-a="fbar" aria-label="Barra lateral no parágrafo" title="Barra lateral no parágrafo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4v16" stroke-width="3.5"/><path d="M11 8h9M11 12h9M11 16h6"/></svg></button>
-  <i class="sep"></i><button class="tx" data-a="ins" data-v="biblico" aria-label="Inserir versículo">📖 Versículo</button><button class="tx" data-a="ins" data-v="citacao" aria-label="Inserir citação">❝ Citação</button><button class="tx" data-a="ins" data-v="obs" aria-label="Inserir observação">✎ Nota</button><button class="tx" data-a="ilusinsb" aria-label="Inserir ilustração">${ico("bulb",15)} Ilustração</button><button class="tx" data-a="iafoco" aria-label="Assistente de IA">${ico("spark",15)} IA</button>
+  <i class="sep"></i><button class="tx" data-a="ins" data-v="citacao" aria-label="Inserir citação">❝ Citação</button><button class="tx" data-a="ins" data-v="obs" aria-label="Inserir observação">✎ Nota</button><button class="tx" data-a="ilusinsb" aria-label="Inserir ilustração">${ico("bulb",15)} Ilustração</button><button class="tx" data-a="iafoco" aria-label="Assistente de IA">${ico("spark",15)} IA</button>
   </div></div>`;
   $("app").innerHTML=h;
   document.querySelectorAll(".tpb textarea.ta").forEach(autoH);
@@ -1479,7 +1480,7 @@ function inserirBloco(tipo){
 function focaBloco(id){setTimeout(()=>{const e=document.querySelector('[data-bid="'+id+'"] .rt, [data-bid="'+id+'"] textarea');if(!e)return;e.focus();if(e.isContentEditable){const r=document.createRange();r.selectNodeContents(e);r.collapse(false);const x=getSelection();x.removeAllRanges();x.addRange(r);}e.scrollIntoView({block:"center",behavior:"smooth"});},40);}
 const autoH=e=>{e.style.height="auto";if(e.scrollHeight)e.style.height=e.scrollHeight+2+"px";};
 document.addEventListener("focusin",e=>{const k=e.target.closest&&e.target.closest("[data-bid]");if(k&&V.tela==="edit")V.fb=k.dataset.bid;});
-document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(".fmtbar"))e.preventDefault();});
+document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(".fmtbar,.vbtn"))e.preventDefault();});
 document.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".tpb textarea.ta"))autoH(e.target);});
 function achaT(el){const b=el.closest("[data-t]");return b&&cur().topicos.find(t=>t.id===b.dataset.t);}
 function mover(arr,id,d){const i=arr.findIndex(t=>t.id===id),j=i+d;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];cur().at=Date.now();salvar();rerender();}
@@ -2962,7 +2963,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="57";
+const VER="58";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
