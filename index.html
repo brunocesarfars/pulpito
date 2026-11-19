@@ -2460,46 +2460,110 @@ function abrirPasta(){
 async function exportarPDF(s){
   try{await carregar("jspdf");}catch(e){toast("Não consegui preparar o PDF. Tente de novo com internet.",3000);return;}
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),W=210,H=297,M=20,CW=W-2*M,MM=.3528;let y=M;
-  const lat=t=>String(t||"").replace(/[^\x09\x0A\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g,"");
-  const need=h=>{if(y+h>H-20){doc.addPage();y=M;}};
-  function txt(t,o){
-    o=Object.assign({size:11.5,style:"normal",color:[35,32,28],ind:0,lh:1.5,gap:2},o||{});
-    doc.setFont("helvetica",o.style);doc.setFontSize(o.size);doc.setTextColor(...o.color);
-    const ls=doc.splitTextToSize(lat(t),CW-o.ind),lh=o.size*MM*o.lh;
-    ls.forEach(l=>{need(lh);doc.text(l,M+o.ind,y+o.size*MM*.9);y+=lh;});y+=o.gap;
+  const lat=t=>String(t||"").replace(/[^\x09\x0A\x20-\x7E -ÿ–—‘’“”•…]/g,"");
+  /* paleta do Púlpito: preto, ouro e creme */
+  const PRETO=[11,11,13],OURO=[242,185,59],OURO2=[176,115,0],CREME=[252,247,234],TINTA=[38,34,28],CINZA=[124,119,110],LINHA=[232,220,190];
+  const gs=o=>{try{doc.setGState(new doc.GState({opacity:o,"stroke-opacity":o}));}catch(e){}};
+  /* a marca: quadrado arredondado com o P, igual ao ícone do app */
+  function marca(x,yy,sz,cor,op){
+    gs(op==null?1:op);doc.setDrawColor(...cor);doc.setLineWidth(sz*.055);doc.roundedRect(x,yy,sz,sz,sz*.24,sz*.24,"S");
+    doc.setTextColor(...cor);doc.setFont("helvetica","bold");doc.setFontSize(sz*2.35);doc.text("P",x+sz/2,yy+sz*.73,{align:"center"});gs(1);
   }
-  const OURO=[168,109,0],CINZA=[120,116,108];
-  txt(s.titulo||"Sem título",{size:23,style:"bold",lh:1.2,gap:3});
-  if(s.base)txt("Texto base: "+s.base,{size:12,style:"bold",color:OURO,gap:1.5});
-  txt([s.min+" min",s.assunto,s.topicos.length+" tópico"+(s.topicos.length===1?"":"s")].filter(Boolean).join("  ·  "),{size:10,color:CINZA,gap:4});
-  doc.setDrawColor(222,212,186);doc.setLineWidth(.4);doc.line(M,y,W-M,y);y+=7;
+  const marcaD=()=>marca(W-M-34,H-72,34,OURO,.09);          /* marca d'água no canto */
+  function novaPagina(){doc.addPage();marcaD();y=M+4;}
+  const livre=()=>H-22-y;
+  function nec(h){if(h>livre())novaPagina();}
+  function txt(t,o){
+    o=Object.assign({size:11.5,style:"normal",font:"helvetica",color:TINTA,ind:0,lh:1.55,gap:2,maxw:CW},o||{});
+    doc.setFont(o.font,o.style);doc.setFontSize(o.size);doc.setTextColor(...o.color);
+    const ls=doc.splitTextToSize(lat(t),o.maxw-o.ind),lh=o.size*MM*o.lh;
+    ls.forEach(l=>{nec(lh);doc.text(l,M+o.ind,y+o.size*MM*.9,{align:o.align||"left"});y+=lh;});y+=o.gap;
+  }
+  /* caixa de fundo creme com barra dourada, quebrando entre páginas sem cortar o fundo */
+  function caixa(label,t,o){
+    o=Object.assign({size:11.5,font:"times",style:"italic",color:TINTA,fill:CREME,bar:OURO,lh:1.55,padX:6,padY:3.4,gap:4,labelCor:OURO2},o||{});
+    doc.setFont(o.font,o.style);doc.setFontSize(o.size);
+    const ls=doc.splitTextToSize(lat(t),CW-o.padX*2-1),lh=o.size*MM*o.lh,lab=label?5:0;
+    let i=0,primeira=true;
+    if(!ls.length&&!label)return;
+    while(i<ls.length||primeira){
+      const extra=primeira?lab:0,cabe=Math.floor((livre()-o.padY*2-extra)/lh);
+      if(cabe<2&&(ls.length-i)>1||(cabe<1)){novaPagina();continue;}
+      const n=Math.max(0,Math.min(cabe,ls.length-i)),h=n*lh+o.padY*2+extra;
+      doc.setFillColor(...o.fill);doc.roundedRect(M,y,CW,h,2.4,2.4,"F");
+      doc.setFillColor(...o.bar);doc.roundedRect(M,y,1.5,h,.75,.75,"F");
+      let yy=y+o.padY;
+      if(primeira&&label){doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...o.labelCor);doc.text(lat(label),M+o.padX,yy+3.2);yy+=lab;}
+      doc.setFont(o.font,o.style);doc.setFontSize(o.size);doc.setTextColor(...o.color);
+      ls.slice(i,i+n).forEach(l=>{doc.text(l,M+o.padX,yy+o.size*MM*.9);yy+=lh;});
+      y+=h;i+=n;primeira=false;
+      if(i<ls.length)novaPagina();
+    }
+    y+=o.gap;
+  }
+  /* ---------- capa: faixa preta com título ---------- */
+  marcaD();
+  doc.setFont("helvetica","bold");doc.setFontSize(25);
+  const tl=doc.splitTextToSize(lat(s.titulo||"Sem título"),CW),lhT=25*MM*1.18;
+  const w=palS(s),est=minEst(w);
+  const meta=[s.min+" min",s.topicos.length+" tópico"+(s.topicos.length===1?"":"s"),w?w.toLocaleString("pt-BR")+" palavras":"",s.assunto].filter(Boolean).join("   ·   ");
+  const bandH=Math.max(50,12+10+tl.length*lhT+(s.base?11:0)+9+10);
+  doc.setFillColor(...PRETO);doc.rect(0,0,W,bandH,"F");
+  doc.setFillColor(...OURO);doc.rect(0,bandH,W,1.6,"F");
+  marca(M,11,9,OURO);
+  doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(...OURO);doc.text("PÚLPITO",M+12.5,16.2,{charSpace:1.4});
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(170,166,155);doc.text("MENSAGEM",W-M,16.2,{align:"right",charSpace:1.4});
+  let yy=29;doc.setFont("helvetica","bold");doc.setFontSize(25);doc.setTextColor(255,255,255);
+  tl.forEach(l=>{doc.text(l,M,yy+25*MM*.85);yy+=lhT;});
+  if(s.base){doc.setFont("times","italic");doc.setFontSize(13);doc.setTextColor(...OURO);doc.text(lat("Texto base: "+s.base),M,yy+5.5);yy+=11;}
+  doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(185,181,170);doc.text(lat(meta),M,yy+3);
+  y=bandH+11;
+  if(s.ideia&&s.ideia.trim())caixa("IDEIA CENTRAL",s.ideia.trim(),{size:13,style:"italic",font:"times",fill:[255,243,205],bar:OURO2,gap:7});
+  /* ---------- tópicos ---------- */
   s.topicos.forEach((t,i)=>{
-    need(26);y+=2;
-    txt((i+1)+".  "+(t.titulo||"Tópico"),{size:15,style:"bold",color:OURO,lh:1.25,gap:t.ref?.5:3});
-    if(t.ref)txt(t.ref,{size:10,style:"italic",color:CINZA,gap:3});
+    nec(30);y+=2;
+    const cy=y+4.6;
+    doc.setFillColor(...OURO);doc.circle(M+4.6,cy,4.6,"F");
+    doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...PRETO);doc.text(String(i+1),M+4.6,cy+1.6,{align:"center"});
+    doc.setFont("helvetica","bold");doc.setFontSize(15.5);doc.setTextColor(...PRETO);
+    const tt=doc.splitTextToSize(lat(t.titulo||"Tópico"),CW-48);
+    tt.forEach((l,k)=>{doc.text(l,M+13,y+6+k*6.6);});
+    const pw=palT(t);let rx=W-M;
+    if(pw){doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...CINZA);doc.text("~"+minEst(pw)+" min",rx,y+5.6,{align:"right"});}
+    y+=Math.max(11.5,tt.length*6.6+4.8);
+    if(t.ref){doc.setFont("times","italic");doc.setFontSize(10.5);doc.setTextColor(...OURO2);doc.text(lat(t.ref),M+13,y);y+=5;}
+    doc.setDrawColor(...LINHA);doc.setLineWidth(.35);doc.line(M,y,W-M,y);y+=5;
     t.blocos.forEach(b=>{
-      if(b.tipo==="biblico"){
-        const p0=doc.getNumberOfPages(),y0=y;
-        txt(b.ref,{size:10,style:"bold",color:OURO,ind:5,gap:.8});
-        const tx=b.t||textoRef(b.ref);if(tx)txt(tx,{size:11,style:"italic",ind:5,gap:1});
-        if(doc.getNumberOfPages()===p0){doc.setDrawColor(214,170,70);doc.setLineWidth(.9);doc.line(M+1.5,y0,M+1.5,y-1.5);}
-        y+=2.5;
-      }else if(b.tipo==="lista"){
+      if(b.tipo==="biblico"){caixa(lat(b.ref||"").toUpperCase(),b.t||textoRef(b.ref)||"",{size:11.5});}
+      else if(b.tipo==="lista"){
         b.t.split("\n").filter(x=>x.trim()).forEach(x=>{
-          const ls=doc.splitTextToSize(lat(x),CW-8),lh=11.5*MM*1.5;
-          ls.forEach((l,k)=>{need(lh);doc.setFont("helvetica","normal");doc.setFontSize(11.5);doc.setTextColor(35,32,28);if(!k)doc.text("•",M+2,y+11.5*MM*.9);doc.text(l,M+7,y+11.5*MM*.9);y+=lh;});
-        });y+=2.5;
+          const ls=doc.splitTextToSize(lat(x),CW-9),lh=11.5*MM*1.55;
+          ls.forEach((l,k)=>{nec(lh);doc.setFont("helvetica","normal");doc.setFontSize(11.5);doc.setTextColor(...TINTA);if(!k){doc.setFillColor(...OURO);doc.circle(M+3,y+lh*.42,1.1,"F");}doc.text(l,M+8,y+11.5*MM*.9);y+=lh;});
+        });y+=3;
       }else if(b.tipo==="texto"){
-        plain(b.t).split("\n").filter(x=>x.trim()).forEach(p=>txt(p,{gap:2}));y+=.5;
+        plain(b.t).split("\n").filter(x=>x.trim()).forEach(p=>txt(p,{gap:2.6}));y+=.8;
       }else if(b.tipo==="citacao"){
-        txt("“"+b.t+"”",{style:"italic",ind:6,gap:.8});if(b.aut)txt("— "+b.aut,{size:9.5,color:CINZA,ind:6,gap:2.5});
-      }else txt("Obs.: "+b.t,{size:10,style:"italic",color:CINZA,gap:2.5});
+        nec(24);doc.setFont("times","bold");doc.setFontSize(34);doc.setTextColor(...OURO);doc.text("“",M+1,y+9);
+        txt(b.t,{style:"italic",font:"times",size:12.5,ind:11,gap:.6,color:[70,64,54]});
+        if(b.aut)txt("— "+b.aut,{size:9.5,color:CINZA,ind:11,gap:3,style:"bold"});else y+=2;
+      }else caixa("NOTA PESSOAL",b.t,{size:10,style:"italic",font:"helvetica",fill:[243,241,236],bar:[170,166,155],labelCor:CINZA,color:[90,86,78],gap:3.5});
     });
-    y+=3;
+    y+=5;
   });
+  /* encerramento */
+  nec(26);y+=3;doc.setDrawColor(...OURO);doc.setLineWidth(.5);doc.line(W/2-22,y+6,W/2-6,y+6);doc.line(W/2+6,y+6,W/2+22,y+6);
+  marca(W/2-3.2,y+2.8,6.4,OURO2);
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...CINZA);doc.text("Gerado pelo Púlpito em "+dataBR(hoje()),W/2,y+16,{align:"center"});
+  /* rodapé em todas as páginas */
   const N=doc.getNumberOfPages();
-  for(let i=1;i<=N;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(150,146,138);doc.text("Púlpito",M,H-10);doc.text(lat((s.titulo||"").slice(0,50)),W/2,H-10,{align:"center"});doc.text(i+" / "+N,W-M,H-10,{align:"right"});}
-  const nome=((s.titulo||"sermao").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9]+/g,"-").replace(/^-|-$/g,"").toLowerCase()||"sermao")+".pdf";
+  for(let i=1;i<=N;i++){
+    doc.setPage(i);doc.setDrawColor(...LINHA);doc.setLineWidth(.3);doc.line(M,H-15,W-M,H-15);
+    marca(M,H-12.4,4.4,OURO2);
+    doc.setFont("helvetica","bold");doc.setFontSize(8);doc.setTextColor(...OURO2);doc.text("PÚLPITO",M+6.2,H-9.2,{charSpace:.8});
+    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...CINZA);doc.text(lat((s.titulo||"").slice(0,60)),W/2,H-9.2,{align:"center"});
+    doc.text(i+" / "+N,W-M,H-9.2,{align:"right"});
+  }
+  const nome=((s.titulo||"sermao").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-zA-Z0-9]+/g,"-").replace(/^-|-$/g,"").toLowerCase()||"sermao")+".pdf";
   doc.save(nome);toast("PDF gerado: "+nome,3200);
 }
 /* ---------- Seleção de versículos ---------- */
@@ -3048,7 +3112,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="59";
+const VER="60";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
