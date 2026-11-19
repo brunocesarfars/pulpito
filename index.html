@@ -708,6 +708,19 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 .bk.bsm{position:relative;padding-left:40px}.bk.bsm::before{content:"";position:absolute;left:10px;top:14px;width:22px;height:22px;border-radius:7px;border:2px solid var(--gold);background:transparent}.bk.bsm.bsel::before{background:var(--gold)}.bk.bsm.bsel::after{content:"✓";position:absolute;left:15px;top:12px;font-weight:800;color:var(--gold-ink)}.bk.bsm.bsel{outline:2px solid var(--gold);border-radius:12px}.bk.bsm .rt{pointer-events:none;user-select:none;-webkit-user-select:none}
 #bselbar{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:9;display:flex;gap:6px;align-items:center;padding:8px;border-radius:16px;background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px -8px #000b}#bselbar span{font-size:13px;white-space:nowrap}#bselbar .btn{flex:1;height:40px;font-size:13px;min-width:0;padding:0 6px}
 .fmtbar .tx.on{background:var(--gold);color:var(--gold-ink)}
+
+.vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--text)}
+.ctl .vrt{display:flex;gap:8px;align-items:center}
+.lista-msgs.grade{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lista-msgs.grade .sc3{margin-bottom:0;border-radius:18px}
+.lista-msgs.grade .sc3 .sb3{padding:12px 40px 4px 14px;gap:6px}
+.lista-msgs.grade .sc3 .sb3 b{font-size:15.5px;overflow-wrap:anywhere}
+.lista-msgs.grade .sc3 .sm span:nth-child(n+2){display:none}
+.lista-msgs.grade .sc3 .stb{top:6px;right:4px;width:34px;height:34px}
+.lista-msgs.grade .sc3 .ac3{flex-direction:column;align-items:stretch;gap:8px;padding:4px 12px 12px 14px}
+.lista-msgs.grade .sc3 .pl{margin-left:0;justify-content:center;height:36px}
+.lista-msgs.grade .chips .chip:nth-child(n+2){display:none}
+@media (min-width:1000px){.lista-msgs.grade{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -1009,7 +1022,8 @@ const proxEventos=()=>{const h=hoje();return db.eventos.filter(e=>e.data>=h).sor
 
 /* ---------- Ícones ---------- */
 const IC={
- home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+
+ grid:'<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>', home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
  list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
  book:'<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 21.5z"/><path d="M4 21.5A2.5 2.5 0 006.5 24H20"/>',
  cal:'<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>',
@@ -1045,7 +1059,7 @@ const IC={
 };
 const ico=(n,sz)=>`<svg class="svg" viewBox="0 0 24 24" width="${sz||22}" height="${sz||22}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 /* ---------- Telas ---------- */
-let V={sel:new Set(),grupo:(db.cfg&&db.cfg.agr)||"todos",det:false,bk:null,ch:null,at:"todos",bq:"",alvo:0,tela:"lista",tab:"inicio",filtro:"todas",pasta:"",q:"",id:null,apagar:null,ab:new Set(),mes:[new Date().getFullYear(),new Date().getMonth()]};
+let V={vista:(()=>{try{return localStorage.getItem("pulpito.vista")==="grade"?"grade":"lista"}catch(e){return "lista"}})(),sel:new Set(),grupo:(db.cfg&&db.cfg.agr)||"todos",det:false,bk:null,ch:null,at:"todos",bq:"",alvo:0,tela:"lista",tab:"inicio",filtro:"todas",pasta:"",q:"",id:null,apagar:null,ab:new Set(),mes:[new Date().getFullYear(),new Date().getMonth()]};
 function nav(){
   const it=[["inicio",ico("home"),"Início"],["msgs",ico("list"),"Mensagens"],["biblia",ico("book"),"Bíblia"],["agenda",ico("cal"),"Agenda"],["ia",ico("spark"),"IA"],["mais",ico("more"),"Mais"]];
   const on=V.tela==="ia"?"ia":V.tab;
@@ -1129,11 +1143,11 @@ function renderMsgs(){
   <label class="sbox">${ico("search",20)}<input id="q" type="search" placeholder="Buscar mensagens ou versículos" value="${esc(V.q)}"></label>
   <div class="seg eq">${[["todas","Todas"],["favoritas","Favoritas"],["recentes","Recentes"]].map(([k,n])=>`<button class="${V.filtro===k?"on":""}" data-a="filtro" data-v="${k}">${n}</button>`).join("")}</div>`;
   if(pastas.length)h+=`<div class="pastas">${pastas.map(p=>`<button class="pasta ${V.pasta===p?"on":""}" data-a="pasta" data-v="${esc(p)}">${ico("folder",20)}<span>${esc(p)}</span><small>${db.sermoes.filter(s=>s.pasta===p).length}</small></button>`).join("")}</div>`;
-  h+=`<div class="ctl"><span class="meta">${lista.length} mensage${lista.length===1?"m":"ns"}</span><button class="agr" data-a="agrupar">${ico("sort",16)}${gn}</button></div>`;
+  h+=`<div class="ctl"><span class="meta">${lista.length} mensage${lista.length===1?"m":"ns"}</span><span class="vrt"><button class="vbtn" data-a="vista" aria-label="${V.vista==="grade"?"Ver em lista":"Ver em grade"}">${V.vista==="grade"?ico("list",18):ico("grid",18)}</button><button class="agr" data-a="agrupar">${ico("sort",16)}${gn}</button></span></div>`;
   if(!lista.length)h+=`<p class="empty">${db.sermoes.length?"Nada encontrado.":"Nenhuma mensagem ainda. Toque em + para criar."}</p>`;
   grupos.forEach(g=>{
     if(g.h)h+=`<div class="gh2"><span>${esc(g.h)}</span><i>${g.it.length}${V.grupo==="serie"&&g.h!=="Sem série"?" · "+g.it.filter(x=>x.hist.length).length+" pregadas":""}</i></div>`;
-    h+=`<div class="lista-msgs">${g.it.map(cartao).join("")}</div>`;
+    h+=`<div class="lista-msgs${V.vista==="grade"?" grade":""}">${g.it.map(cartao).join("")}</div>`;
   });
   h+=`<button class="fab" data-a="novo" aria-label="Nova mensagem">${ico("plus",26)}</button>`;
   const foco=document.activeElement&&document.activeElement.id==="q";
@@ -2772,6 +2786,7 @@ document.addEventListener("click",e=>{
   const a=b.dataset.a,v=b.dataset.v;
   if(a==="tab"){V.tab=v;V.tela="lista";render();scrollTo(0,0);}
   else if(a==="grupo"){V.grupo=v;db.cfg.agr=v;salvar();fechar();renderMsgs();}
+  else if(a==="vista"){V.vista=V.vista==="grade"?"lista":"grade";try{localStorage.setItem("pulpito.vista",V.vista)}catch(e){}render();}
   else if(a==="agrupar")abrirAgrupar();
   else if(a==="filtro"){V.filtro=v;renderMsgs();}
   else if(a==="iaabrir"){if(V.tela==="ia"&&!IA.setup)return;V.tela="ia";IA.setup=false;if(!IA.msgs.length){IA.sid="";IA.ctx=false;}render();scrollTo(0,0);}
@@ -3114,7 +3129,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="63";
+const VER="64";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
