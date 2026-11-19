@@ -1333,8 +1333,7 @@ function renderEdit(y){
   <div class="row"><div style="flex:2"><input class="in" id="f-serie" list="dl-s" placeholder="Ex.: Romanos" value="${esc(s.serie||"")}"></div><div style="flex:1"><input class="in" id="f-serien" type="number" min="1" inputmode="numeric" placeholder="Nº" value="${s.serieN||""}" aria-label="Número na série"></div></div>
   <datalist id="dl-s">${seriesTodas().map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
   <label class="f" for="f-pasta">Pasta</label>
-  <input class="in" id="f-pasta" list="dl-p" placeholder="Sem pasta" value="${esc(s.pasta)}">
-  <datalist id="dl-p">${pastasTodas().map(a=>`<option value="${esc(a)}">`).join("")}</datalist>
+  <div class="row tm" style="flex-wrap:wrap"><button class="${s.pasta?"":"on"}" data-a="pastaSet" data-v="">Sem pasta</button>${pastasTodas().map(p=>`<button class="${s.pasta===p?"on":""}" data-a="pastaSet" data-v="${esc(p)}">${esc(p)}</button>`).join("")}<button data-a="npastaS">+ Nova pasta</button></div>
   <label class="f">Status</label>
   <div class="row tm">${STATUS.map(([k,n])=>`<button class="${s.status===k?"on":""}" data-a="status" data-v="${k}">${n}</button>`).join("")}</div>
   <label class="f">Modo de pregação</label>
@@ -2875,7 +2874,9 @@ document.addEventListener("click",e=>{
   else if(a==="favs"){V.tab="msgs";V.filtro="favoritas";V.pasta="";render();}
   else if(a==="pasta"){V.pasta=V.pasta===v?"":v;renderMsgs();}
   else if(a==="npasta")abrirPasta();
-  else if(a==="npok"){const n=$("np").value.trim();if(n&&!db.pastas.includes(n)){db.pastas.push(n);salvar();}fechar();render();}
+  else if(a==="npok"){const n=$("np").value.trim();if(n&&!db.pastas.includes(n)){db.pastas.push(n);salvar();}if(n&&V.npSerm){const x=db.sermoes.find(y=>y.id===V.npSerm);if(x){x.pasta=n;x.at=Date.now();salvar();}}V.npSerm=null;fechar();render();}
+  else if(a==="pastaSet"){const x=cur();x.pasta=v;x.at=Date.now();salvar();rerender();}
+  else if(a==="npastaS"){V.npSerm=cur().id;abrirPasta();}
   else if(a==="fav"){const s=sermao(v);s.fav=!s.fav;salvar();render();}
   else if(a==="abrir"){V.id=v;V.tela="edit";V.apagar=null;V.ab=new Set();sermao(v).aberto=Date.now();salvar();fechar();render();scrollTo(0,0);}
   else if(a==="novo")abrirNovo();
@@ -3054,7 +3055,7 @@ else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!=
     if(/^\s*[\[{]/.test(t)){try{let d=JSON.parse(t);d=Array.isArray(d)?d:(d.sermoes||[d]);if(!d.length||!d[0].topicos)throw 0;d.forEach(x=>{x.id=uid();(x.topicos||[]).forEach(p=>{p.id=uid();(p.blocos||[]).forEach(k=>k.id=uid());});db.sermoes.push(x);});ajustar();salvar();fechar();V.tab="msgs";V.tela="lista";render();toast(d.length+" sermão(ões) adicionado(s)",2600);return;}catch(x){}}
     criarImportado(blocosTexto(t),"Sermão colado");}
   else if(a==="backup")abrirBackup();
-  else if(a==="fechar")fechar();
+  else if(a==="fechar"){V.npSerm=null;fechar();}
   else if(a==="copiar"){const t=$("bk");t.select();let ok=false;try{ok=document.execCommand("copy");}catch(x){}try{navigator.clipboard.writeText(t.value);ok=true;}catch(x){}toast(ok?"Copiado":"Selecionado. Use copiar do teclado");}
   else if(a==="importar"){try{const d=JSON.parse($("bk").value);if(!d||!Array.isArray(d.sermoes))throw 0;db=d;ajustar();salvar();fechar();V.tela="lista";render();toast("Importado");}catch(x){toast("Texto inválido");}}
 });
@@ -3129,7 +3130,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="64";
+const VER="65";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
