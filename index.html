@@ -705,7 +705,9 @@ a.btn{text-decoration:none;color:var(--text);align-items:center}
 .hpst{display:flex;gap:8px}.hpst div{flex:1;text-align:center;padding:10px 4px;border-radius:12px;background:var(--card,#ffffff0d)}.hpst b{display:block;font-family:var(--display);font-size:22px}.hpst small{color:var(--muted);font-size:12px}
 .hpr small.tts{display:block;margin-top:3px;font-size:12px}
 .trecho{display:block;margin:6px 0 2px;font-size:13px;color:var(--muted);line-height:1.4;text-align:left}.trecho small{color:var(--gold);font-weight:700;margin-right:4px}.trecho mark{background:#e0a93b55;color:inherit;border-radius:3px}
-.dock{display:flex;gap:8px;align-items:center;max-width:980px;margin:0 auto}.dock .fmtbar{flex:1;min-width:0}.vbtn{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:64px;height:56px;border-radius:16px;background:var(--gold);color:var(--gold-ink);font-size:20px;box-shadow:0 8px 28px -10px #000a}.vbtn span{font-size:11px;font-weight:700}
+.bk.bsm{position:relative;padding-left:40px}.bk.bsm::before{content:"";position:absolute;left:10px;top:14px;width:22px;height:22px;border-radius:7px;border:2px solid var(--gold);background:transparent}.bk.bsm.bsel::before{background:var(--gold)}.bk.bsm.bsel::after{content:"✓";position:absolute;left:15px;top:12px;font-weight:800;color:var(--gold-ink)}.bk.bsm.bsel{outline:2px solid var(--gold);border-radius:12px}.bk.bsm .rt{pointer-events:none;user-select:none;-webkit-user-select:none}
+#bselbar{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:9;display:flex;gap:6px;align-items:center;padding:8px;border-radius:16px;background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px -8px #000b}#bselbar span{font-size:13px;white-space:nowrap}#bselbar .btn{flex:1;height:40px;font-size:13px;min-width:0;padding:0 6px}
+.fmtbar .tx.on{background:var(--gold);color:var(--gold-ink)}
 </style>
 </head>
 <body>
@@ -1051,6 +1053,7 @@ function nav(){
 }
 function render(){
   setTimeout(selbar,0);
+  if(V.tela!=="edit"&&V.bsel){V.bsel=null;}setTimeout(pintaBsel,0);
   document.body.classList.toggle("sem-nav",V.tela==="edit");document.body.classList.toggle("tela-ia",V.tela==="ia");
   if(V.tela==="edit")return renderEdit();
   if(V.tela==="ilus")return renderIlus();
@@ -1288,7 +1291,7 @@ function blocoEd(b,i,n){
   else if(b.tipo==="lista")c=`<div class="bkh">${ic} ${lab}</div><textarea class="in ta" data-b="t" placeholder="Um item por linha">${esc(b.t)}</textarea>`;
   else if(b.tipo==="citacao")c=`<div class="bkh">${ic} ${lab}</div><textarea class="in ta" data-b="t" placeholder="Texto da citação">${esc(b.t)}</textarea><input class="in" data-b="aut" placeholder="Autor" value="${esc(b.aut||"")}">`;
   else c=`<div class="bkh">${ic} ${lab} <small>só para você</small></div><textarea class="in ta" data-b="t" placeholder="Lembrete só para você (aparece em cinza ao pregar)">${esc(b.t)}</textarea>`;
-  return `<div class="bk t-${b.tipo}" data-bid="${b.id}"><button class="kb" data-a="bmais" aria-label="Opções deste bloco">⋯</button><div class="btools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}">⤓ Novo tópico daqui</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="iabloco" data-v="${b.id}" aria-label="Assistente de IA neste texto">${ico("spark",14)} IA</button><button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></div>${c}</div>`;
+  return `<div class="bk t-${b.tipo}${V.bsel?" bsm":""}${V.bsel&&V.bsel.has(b.id)?" bsel":""}" data-bid="${b.id}"><button class="kb" data-a="bmais" aria-label="Opções deste bloco">⋯</button><div class="btools"><button data-a="bsobe" data-v="${b.id}" aria-label="Subir">▲</button><button data-a="bdesce" data-v="${b.id}" aria-label="Descer">▼</button><button class="tx" data-a="bnovot" data-v="${b.id}">⤓ Novo tópico daqui</button>${b.tipo==="texto"||b.tipo==="citacao"?`<button class="tx" data-a="iabloco" data-v="${b.id}" aria-label="Assistente de IA neste texto">${ico("spark",14)} IA</button><button class="tx" data-a="ilusdobloco" data-v="${b.id}" aria-label="Guardar no banco de ilustrações">${ico("bulb",14)}</button>`:""}<button data-a="bdel" data-v="${b.id}" aria-label="Excluir bloco">✕</button></div>${c}</div>`;
 }
 const WPM=130;
 function palT(t){let n=0;t.blocos.forEach(b=>{if(b.tipo==="obs")return;const x=b.tipo==="texto"?plain(b.t):(b.t||"");const w=x.split(/\s+/).filter(Boolean).length;n+=b.tipo==="biblico"?Math.round(w*.8):w;});return n;}
@@ -1346,11 +1349,11 @@ function renderEdit(y){
   h+=`<button class="add" style="height:44px" data-a="regis">+ Registrar pregação</button>
   <div class="bar" style="margin-top:22px"><button class="btn" data-a="ensaiar">▶ Ensaiar (cronometrar)</button><button class="btn" data-a="pdf">Exportar PDF</button><button class="btn" data-a="doc">Exportar Word</button><button class="btn" data-a="dup">Duplicar</button><button class="btn" data-a="txt">Copiar como texto</button>
   <button class="btn danger" data-a="del">${V.apagar===s.id?"Toque de novo para excluir":"Excluir mensagem"}</button></div>
-  <div class="dock"><button class="vbtn" data-a="ins" data-v="biblico" aria-label="Inserir versículo da Bíblia aqui">📖<span>Versículo</span></button><div class="fmtbar" role="toolbar" aria-label="Formatação">
+  <div class="dock"><div class="fmtbar" role="toolbar" aria-label="Formatação">
   <button data-a="fmt" data-v="bold" aria-label="Negrito"><b>B</b></button><button data-a="fmt" data-v="italic" aria-label="Itálico"><i>I</i></button><button data-a="fmt" data-v="underline" aria-label="Sublinhado"><u>U</u></button>
   <button class="hl" data-a="fmt" data-v="g1" aria-label="Grifar amarelo"><span style="background:#f5d34a"></span></button><button class="hl" data-a="fmt" data-v="g2" aria-label="Grifar verde"><span style="background:#5ec882"></span></button><button class="hl" data-a="fmt" data-v="g3" aria-label="Grifar rosa"><span style="background:#f078a0"></span></button><button class="hl x" data-a="fmt" data-v="g0" aria-label="Tirar grifo"><span></span></button>
   <i class="sep"></i><button data-a="flist" data-v="ul" aria-label="Lista com marcadores"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg></button><button data-a="flist" data-v="ol" aria-label="Lista numerada"><b style="font-size:13px">1.</b></button><button data-a="frec" aria-label="Recuar parágrafo (Tab)" title="Recuar parágrafo (Tab)"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M11 11h10M11 17h10M3 9l3 3-3 3"/></svg></button><button data-a="fbar" aria-label="Barra lateral no parágrafo" title="Barra lateral no parágrafo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4v16" stroke-width="3.5"/><path d="M11 8h9M11 12h9M11 16h6"/></svg></button>
-  <i class="sep"></i><button class="tx" data-a="ins" data-v="citacao" aria-label="Inserir citação">❝ Citação</button><button class="tx" data-a="ins" data-v="obs" aria-label="Inserir observação">✎ Nota</button><button class="tx" data-a="ilusinsb" aria-label="Inserir ilustração">${ico("bulb",15)} Ilustração</button><button class="tx" data-a="iafoco" aria-label="Assistente de IA">${ico("spark",15)} IA</button>
+  <i class="sep"></i><button class="tx" data-a="ins" data-v="biblico" aria-label="Inserir versículo">📖 Versículo</button><button class="tx" data-a="seltopico" aria-label="Transformar o trecho selecionado em tópico">✂ Tópico</button><button class="tx ${V.bsel?"on":""}" data-a="bselmode" aria-label="Selecionar vários parágrafos">☑ Selecionar</button><button class="tx" data-a="ins" data-v="citacao" aria-label="Inserir citação">❝ Citação</button><button class="tx" data-a="ins" data-v="obs" aria-label="Inserir observação">✎ Nota</button><button class="tx" data-a="ilusinsb" aria-label="Inserir ilustração">${ico("bulb",15)} Ilustração</button><button class="tx" data-a="iafoco" aria-label="Assistente de IA">${ico("spark",15)} IA</button>
   </div></div>`;
   $("app").innerHTML=h;
   document.querySelectorAll(".tpb textarea.ta").forEach(autoH);
@@ -1480,7 +1483,7 @@ function inserirBloco(tipo){
 function focaBloco(id){setTimeout(()=>{const e=document.querySelector('[data-bid="'+id+'"] .rt, [data-bid="'+id+'"] textarea');if(!e)return;e.focus();if(e.isContentEditable){const r=document.createRange();r.selectNodeContents(e);r.collapse(false);const x=getSelection();x.removeAllRanges();x.addRange(r);}e.scrollIntoView({block:"center",behavior:"smooth"});},40);}
 const autoH=e=>{e.style.height="auto";if(e.scrollHeight)e.style.height=e.scrollHeight+2+"px";};
 document.addEventListener("focusin",e=>{const k=e.target.closest&&e.target.closest("[data-bid]");if(k&&V.tela==="edit")V.fb=k.dataset.bid;});
-document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(".fmtbar,.vbtn"))e.preventDefault();});
+document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(".fmtbar"))e.preventDefault();});
 document.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".tpb textarea.ta"))autoH(e.target);});
 function achaT(el){const b=el.closest("[data-t]");return b&&cur().topicos.find(t=>t.id===b.dataset.t);}
 function mover(arr,id,d){const i=arr.findIndex(t=>t.id===id),j=i+d;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];cur().at=Date.now();salvar();rerender();}
@@ -1521,8 +1524,9 @@ function carregar(k){return carregados[k]||(carregados[k]=(async()=>{
   catch(e){try{await carregaScript(LIBS[k]);}catch(e2){carregados[k]=null;throw new Error("biblioteca");}}
 })());}
 const RX_TIT=/^\s*((\d{1,2}|[IVX]{1,5})\s*[\.\)\-–—:]|(t[óo]pico|ponto|parte|introdu[çc][ãa]o|conclus[ãa]o|aplica[çc][ãa]o|ilustra[çc][ãa]o|ora[çc][ãa]o)\b)/i;
+const RX_PROSA=/^\s*(t[óo]pico|ponto|parte|introdu[çc][ãa]o|conclus[ãa]o|aplica[çc][ãa]o|ilustra[çc][ãa]o|ora[çc][ãa]o)\s*[,;]/i;
 function ehTitulo(t){
-  t=t.trim();if(t.length<3||t.length>110)return false;
+  t=t.trim();if(t.length<3||t.length>110||RX_PROSA.test(t))return false;
   if(RX_TIT.test(t)&&t.length<100)return true;
   const L=t.replace(/[^A-Za-zÀ-ú]/g,"");
   return L.length>=4&&t===t.toUpperCase()&&t.length<90;
@@ -1729,8 +1733,26 @@ function ligaBiblia(ps){
   });
   flush();return out;
 }
+const RX_CAB=/^\s*(introdu[çc][ãa]o|(?:t[óo]pico|ponto|parte)\s*(?:\d{1,2}|[IVX]{1,5}|um|dois|tr[êe]s|quatro|cinco)|(?:\d{1,2}\s*[ºo°ª]?\s*)(?:t[óo]pico|ponto)|conclus[ãa]o|aplica[çc][ãa]o|apelo(?:\s+final)?|ora[çc][ãa]o(?:\s+final)?)\b\s*[:.\-–—)]*\s*/i;
+/* separa cabeçalhos que vieram na mesma linha do texto: "Tópico 1 – A fé" ou "Introdução Bom dia, igreja…" */
+function separaCabecalhos(bl){
+  const out=[];
+  bl.forEach(b=>{
+    if(b.k==="h"||!b.t){out.push(b);return;}
+    const m=RX_CAB.exec(b.t);
+    if(!m){out.push(b);return;}
+    {const rs=b.t.slice(m[0].length);if(!/[:.\-–—)]/.test(m[0])&&rs&&/^[a-zà-ú,;]/.test(rs)){out.push(b);return;}}
+    const cab=m[0].replace(/[\s:.\-–—)]+$/,"").trim(),resto=b.t.slice(m[0].length).trim();
+    const ti=/^(t[óo]pico|ponto|parte|\d)/i.test(cab);
+    if(!resto){out.push({k:"h",t:cab});return;}
+    /* resto curto e sem pontuação final = subtítulo do tópico */
+    if(resto.length<=80&&!/[.!?;,:]$/.test(resto)){out.push({k:"h",t:cab+(ti?" – ":" – ")+resto});return;}
+    out.push({k:"h",t:cab});out.push(Object.assign({},b,{t:resto,m:undefined}));
+  });
+  return out;
+}
 function estruturar(bl,arq){
-  bl=bl.filter(b=>b.t&&b.t.trim());
+  bl=separaCabecalhos(bl.filter(b=>b.t&&b.t.trim()));
   if(!bl.length)return null;
   bl.forEach(b=>{if(b.k==="p"&&ehTitulo(b.t)&&!/^[a-zà-ú]/.test(b.t)&&!/[,;]$/.test(b.t))b.k="h";});
   const temH=bl.some(b=>b.k==="h");
@@ -2356,6 +2378,63 @@ function trechoBusca(s,q){
   }
   return"";
 }
+
+/* ---------- Selecionar vários parágrafos / transformar em tópico ---------- */
+function bselToggle(id){if(!V.bsel)return;V.bsel.has(id)?V.bsel.delete(id):V.bsel.add(id);const e=document.querySelector('[data-bid="'+id+'"]');if(e)e.classList.toggle("bsel",V.bsel.has(id));pintaBsel();}
+function pintaBsel(){
+  let e=$("bselbar");
+  if(!V.bsel||V.tela!=="edit"){if(e)e.remove();document.body.classList.remove("bselmode");return;}
+  document.body.classList.add("bselmode");
+  if(!e){e=document.createElement("div");e.id="bselbar";document.body.appendChild(e);}
+  const n=V.bsel.size;
+  e.innerHTML=`<span><b>${n}</b> ${n===1?"parágrafo":"parágrafos"}</span><button class="btn gold" data-a="bsel-topico" ${n?"":"disabled"}>Virar tópico</button><button class="btn" data-a="bsel-mover" ${n?"":"disabled"}>Mover</button><button class="btn danger" data-a="bsel-del" ${n?"":"disabled"}>Excluir</button><button class="btn" data-a="bselmode">Pronto</button>`;
+}
+function bselBlocos(){
+  const s=cur(),out=[];
+  s.topicos.forEach(t=>t.blocos.forEach(b=>{if(V.bsel&&V.bsel.has(b.id))out.push({t,b});}));
+  return out;
+}
+function bselTopico(){
+  const s=cur(),sel=bselBlocos();if(!sel.length)return;
+  const ids=new Set(sel.map(x=>x.b.id)),tp0=sel[0].t,pos=s.topicos.indexOf(tp0);
+  const blocos=sel.map(x=>x.b);
+  s.topicos.forEach(t=>{t.blocos=t.blocos.filter(b=>!ids.has(b.id));});
+  let titulo="";const f=blocos[0],pt=f.tipo==="texto"?plain(f.t).trim():"";
+  if(blocos.length>1&&f.tipo==="texto"&&pt&&pt.length<=90&&!pt.includes("\n")){titulo=pt;blocos.shift();}
+  const nt={id:uid(),titulo,ref:"",blocos};
+  s.topicos.splice(pos+1,0,nt);
+  s.at=Date.now();V.bsel=null;V.ab=new Set([nt.id]);salvar();rerender();pintaBsel();
+  toast("Novo tópico criado com "+(blocos.length)+(blocos.length===1?" parágrafo":" parágrafos")+". Dê um título se precisar.",3200);
+}
+function abrirBselMover(){
+  const s=cur();
+  $("mb").innerHTML=`<h3>Mover para qual tópico?</h3><div class="lista">${s.topicos.map((t,i)=>`<button data-a="bsel-para" data-v="${t.id}">${i+1}. ${esc(t.titulo||"Tópico sem título")}</button>`).join("")}</div><div class="bar"><button class="btn" data-a="fechar">Cancelar</button></div>`;
+  $("modal").classList.add("show");
+}
+function selParaTopico(){
+  const sel=getSelection();
+  const dica="Selecione um trecho do texto e toque em ✂ Tópico. Para vários parágrafos, use ☑ Selecionar.";
+  if(!sel||!sel.rangeCount||sel.isCollapsed){toast(dica,4200);return;}
+  const r=sel.getRangeAt(0),an=r.commonAncestorContainer,el=an.nodeType===1?an:an.parentElement,rt=el&&el.closest&&el.closest(".rt");
+  if(!rt){toast(dica,4200);return;}
+  const bk=rt.closest("[data-bid]"),t=achaT(rt),s0=cur(),b=t&&t.blocos.find(x=>x.id===bk.dataset.bid);if(!b)return;
+  const div=document.createElement("div");div.appendChild(r.cloneContents());
+  const selHtml=limpa(div.innerHTML),selTxt=plain(selHtml).trim();
+  if(!selTxt){toast(dica,4200);return;}
+  r.deleteContents();rt.normalize();
+  const resto=limpa(rt.innerHTML);
+  if(plain(resto).trim())b.t=resto;else t.blocos=t.blocos.filter(x=>x!==b);
+  const curto=selTxt.length<=90&&!selTxt.includes("\n");
+  const nt={id:uid(),titulo:curto?selTxt:"",ref:"",blocos:curto?[]:[{id:uid(),tipo:"texto",t:selHtml}]};
+  s0.topicos.splice(s0.topicos.indexOf(t)+1,0,nt);
+  sel.removeAllRanges();s0.at=Date.now();V.ab=new Set([nt.id]);salvar();rerender();
+  toast(curto?"O trecho virou o título de um novo tópico.":"O trecho virou um novo tópico. Dê um título se precisar.",3200);
+}
+document.addEventListener("click",e=>{
+  if(!V.bsel||V.tela!=="edit")return;
+  const k=e.target.closest&&e.target.closest(".bk");
+  if(k&&!e.target.closest("[data-a]")){e.preventDefault();e.stopPropagation();bselToggle(k.dataset.bid);}
+},true);
 /* ---------- Registro de pregações ---------- */
 function abrirRegistro(id,min,tt){
   REG={id,min:min||0,tt:tt||[]};
@@ -2772,6 +2851,12 @@ else if(a==="rmbib"){const k=v;db.cfg.custom=(db.cfg.custom||[]).filter(c=>c.k!=
   else if(a==="bmais"){const k=b.closest(".bk");if(k)k.classList.toggle("mais");}
   else if(a==="tmais"){const m=b.closest(".tpb").querySelector(".tmenu");if(m)m.classList.toggle("ver");}
   else if(a==="ins")inserirBloco(v);
+  else if(a==="seltopico")selParaTopico();
+  else if(a==="bselmode"){V.bsel=V.bsel?null:new Set();rerender();pintaBsel();if(V.bsel)toast("Toque nos parágrafos para marcar. Depois: Virar tópico, Mover ou Excluir.",4200);}
+  else if(a==="bsel-topico")bselTopico();
+  else if(a==="bsel-mover")abrirBselMover();
+  else if(a==="bsel-para"){const s0=cur(),dest=s0.topicos.find(x=>x.id===v),sel=bselBlocos();if(dest&&sel.length){const ids=new Set(sel.map(x=>x.b.id)),bl=sel.map(x=>x.b);s0.topicos.forEach(t=>{t.blocos=t.blocos.filter(x=>!ids.has(x.id));});dest.blocos.push(...bl);s0.at=Date.now();V.bsel=null;V.ab=new Set([dest.id]);salvar();fechar();rerender();pintaBsel();toast("Parágrafos movidos.",2200);}}
+  else if(a==="bsel-del"){const sel=bselBlocos();if(sel.length&&confirm("Excluir "+sel.length+" parágrafo(s)?")){const ids=new Set(sel.map(x=>x.b.id));cur().topicos.forEach(t=>{t.blocos=t.blocos.filter(x=>!ids.has(x.id));});cur().at=Date.now();V.bsel=null;salvar();rerender();pintaBsel();}}
   else if(a==="flist"){const r=document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".rt");if(!r)toast("Toque dentro do texto primeiro",1800);else document.execCommand(v==="ol"?"insertOrderedList":"insertUnorderedList");}
   else if(a==="iafoco"){const f=focoT();if(f.bl&&(f.bl.tipo==="texto"||f.bl.tipo==="citacao"))abrirIABloco(f.t.id,f.bl.id);else toast("Toque dentro de um texto primeiro",1800);}
   else if(a==="ilusinsb"){const f=focoT(),t=f.t||cur().topicos.find(x=>V.ab.has(x.id));if(t){ILUSP={tid:t.id};abrirIlusPick();}else toast("Abra um tópico primeiro",1800);}
@@ -2963,7 +3048,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P&&P.t0)t
 /* ---------- Conta e sincronização (Firebase) ---------- */
 const FBCFG={apiKey:"AIzaSyCiEinc0Ex51nyU0nnQTgntq9n0XW2TrA8",authDomain:"pulpito-6c835.firebaseapp.com",projectId:"pulpito-6c835",storageBucket:"pulpito-6c835.firebasestorage.app",messagingSenderId:"657549377212",appId:"1:657549377212:web:57bc1daf0edf71018b9ab9"};
 const FBV="10.12.5";
-const VER="58";
+const VER="59";
 let SY={user:null,estado:"off",msg:"",fs:null,unsub:null,ready:null,pushT:null,rq:[],auth:null,envia:false},SM=null;
 function syncMeta(){if(!SM){try{SM=JSON.parse(localStorage.getItem(nsk("pulpito.sync"))||"{}");}catch(e){SM={};}SM.h=SM.h||{};SM.tomb=SM.tomb||{};SM.p=SM.p||{};SM.cu=SM.cu||0;}return SM;}
 function syncSave(){try{localStorage.setItem(nsk("pulpito.sync"),JSON.stringify(SM));SV.metaErro=false;}catch(e){SV.metaErro=true;}}
